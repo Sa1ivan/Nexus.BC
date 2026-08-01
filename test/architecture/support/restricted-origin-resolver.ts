@@ -1,9 +1,11 @@
+import path from 'node:path';
 import ts from 'typescript';
 import type {
   OriginResolver,
   RestrictedOrigin,
 } from '../types/architecture.types';
-import { resolveImport } from './module-paths';
+import { importTypeBindingName } from './import-like-dependencies';
+import { canonicalPath, resolveImport } from './module-paths';
 import {
   addOrigins,
   enclosingModuleSpecifier,
@@ -12,6 +14,19 @@ import {
   restrictedOriginsForSpecifier,
   sourceFileOrigin,
 } from './restricted-origin';
+import {
+  collectDeclarationTypeOrigins,
+  collectTypeNodeOrigins,
+} from './restricted-type-origin';
+
+interface OriginContext {
+  readonly seenExports: Set<string>;
+  readonly seenSymbols: Set<ts.Symbol>;
+}
+
+function createContext(): OriginContext {
+  return { seenExports: new Set(), seenSymbols: new Set() };
+}
 
 export function createOriginResolver(
   program: ts.Program,
@@ -21,13 +36,17 @@ export function createOriginResolver(
   return {
     checker: program.getTypeChecker(),
     compilerOptions,
-    exportCache: new Map(),
-    exportsInProgress: new Set(),
     program,
     sourceRoot,
-    symbolCache: new Map(),
-    symbolsInProgress: new Set(),
   };
+}
+
+function isWithinSourceRoot(fileName: string, sourceRoot: string): boolean {
+  const relativePath = path.relative(
+    canonicalPath(sourceRoot),
+    canonicalPath(fileName),
+  );
+  return !relativePath.startsWith('..') && !path.isAbsolute(relativePath);
 }
 
 export function resolveLocalSourceFile(
@@ -40,70 +59,69 @@ export function resolveLocalSourceFile(
     containingFile,
     resolver.compilerOptions,
   );
-  if (resolvedFileName === undefined) {
+  if (
+    resolvedFileName === undefined ||
+    !isWithinSourceRoot(resolvedFileName, resolver.sourceRoot)
+  ) {
     return undefined;
   }
-
-  const relativePath = ts.sys
-    .resolvePath(resolvedFileName)
-    .slice(ts.sys.resolvePath(resolver.sourceRoot).length);
-  if (!relativePath.startsWith('/') && !relativePath.startsWith('\\')) {
-    return undefined;
-  }
-
-  return resolver.program.getSourceFile(resolvedFileName);
+  return (
+    resolver.program.getSourceFile(resolvedFileName) ??
+    resolver.program
+      .getSourceFiles()
+      .find(
+        (sourceFile) => canonicalPath(sourceFile.fileName) === resolvedFileName,
+      )
+  );
 }
 
 function originsForExpression(
   expression: ts.Expression,
   resolver: OriginResolver,
+  context: OriginContext,
 ): ReadonlySet<RestrictedOrigin> {
   const origins = new Set<RestrictedOrigin>();
-
   const visit = (node: ts.Node): void => {
     if (ts.isIdentifier(node)) {
       const symbol = resolver.checker.getSymbolAtLocation(node);
       if (symbol !== undefined) {
-        addOrigins(origins, originsForSymbol(symbol, resolver));
+        addOrigins(
+          origins,
+          originsForSymbolInternal(symbol, resolver, context),
+        );
       }
     }
-
     ts.forEachChild(node, visit);
   };
-
   visit(expression);
   return origins;
 }
 
-export function originsForSymbol(
+function originsForSymbolInternal(
   symbol: ts.Symbol,
   resolver: OriginResolver,
+  context: OriginContext,
 ): ReadonlySet<RestrictedOrigin> {
-  const cached = resolver.symbolCache.get(symbol);
-  if (cached !== undefined) {
-    return cached;
-  }
-  if (resolver.symbolsInProgress.has(symbol)) {
+  if (context.seenSymbols.has(symbol)) {
     return new Set();
   }
-
-  resolver.symbolsInProgress.add(symbol);
+  context.seenSymbols.add(symbol);
   const origins = new Set<RestrictedOrigin>();
-
   if (isPrismaServiceLikeName(symbol.getName())) {
     origins.add('prisma-service');
   }
 
   for (const declaration of symbol.getDeclarations() ?? []) {
-    const fileOrigin = sourceFileOrigin(declaration.getSourceFile().fileName);
+    const fileOrigin = sourceFileOrigin(
+      declaration.getSourceFile().fileName,
+      resolver.sourceRoot,
+    );
     if (fileOrigin !== undefined) {
       origins.add(fileOrigin);
     }
-
     const specifier = enclosingModuleSpecifier(declaration);
     if (specifier !== undefined) {
       addOrigins(origins, restrictedOriginsForSpecifier(specifier));
-
       const targetSourceFile = resolveLocalSourceFile(
         specifier,
         declaration.getSourceFile().fileName,
@@ -113,38 +131,82 @@ export function originsForSymbol(
       if (targetSourceFile !== undefined && exportName !== undefined) {
         addOrigins(
           origins,
-          originsForExport(targetSourceFile, exportName, resolver),
+          originsForExportInternal(
+            targetSourceFile,
+            exportName,
+            resolver,
+            context,
+          ),
         );
       }
     }
-
     if (
       ts.isVariableDeclaration(declaration) &&
       declaration.initializer !== undefined
     ) {
       addOrigins(
         origins,
-        originsForExpression(declaration.initializer, resolver),
+        originsForExpression(declaration.initializer, resolver, context),
       );
     }
+    addOrigins(
+      origins,
+      collectDeclarationTypeOrigins(
+        declaration,
+        resolver,
+        (referencedSymbol) =>
+          originsForSymbolInternal(referencedSymbol, resolver, context),
+        (sourceFile, exportName) =>
+          originsForExportInternal(sourceFile, exportName, resolver, context),
+      ),
+    );
   }
 
   if ((symbol.flags & ts.SymbolFlags.Alias) !== 0) {
     const aliasedSymbol = resolver.checker.getAliasedSymbol(symbol);
     if (aliasedSymbol !== symbol) {
-      addOrigins(origins, originsForSymbol(aliasedSymbol, resolver));
+      addOrigins(
+        origins,
+        originsForSymbolInternal(aliasedSymbol, resolver, context),
+      );
     }
   }
-
-  resolver.symbolsInProgress.delete(symbol);
-  resolver.symbolCache.set(symbol, origins);
+  context.seenSymbols.delete(symbol);
   return origins;
+}
+
+export function originsForSymbol(
+  symbol: ts.Symbol,
+  resolver: OriginResolver,
+): ReadonlySet<RestrictedOrigin> {
+  return originsForSymbolInternal(symbol, resolver, createContext());
+}
+
+export function restrictedImportTypeBinding(
+  node: ts.ImportTypeNode,
+  resolver: OriginResolver,
+): { name: string; origins: ReadonlySet<RestrictedOrigin> } | undefined {
+  const context = createContext();
+  const origins = collectTypeNodeOrigins(
+    node,
+    resolver,
+    (symbol) => originsForSymbolInternal(symbol, resolver, context),
+    (sourceFile, exportName) =>
+      originsForExportInternal(sourceFile, exportName, resolver, context),
+  );
+  return origins.size === 0
+    ? undefined
+    : {
+        name: importTypeBindingName(node, node.getSourceFile()),
+        origins,
+      };
 }
 
 function originsForExportDeclaration(
   declaration: ts.ExportDeclaration,
   exportName: string,
   resolver: OriginResolver,
+  context: OriginContext,
 ): ReadonlySet<RestrictedOrigin> {
   const origins = new Set<RestrictedOrigin>();
   const specifier =
@@ -168,12 +230,16 @@ function originsForExportDeclaration(
     if (targetSourceFile !== undefined) {
       addOrigins(
         origins,
-        originsForExport(targetSourceFile, exportName, resolver),
+        originsForExportInternal(
+          targetSourceFile,
+          exportName,
+          resolver,
+          context,
+        ),
       );
     }
     return origins;
   }
-
   if (ts.isNamespaceExport(declaration.exportClause)) {
     if (
       exportName === '*' ||
@@ -183,7 +249,10 @@ function originsForExportDeclaration(
         addOrigins(origins, restrictedOriginsForSpecifier(specifier));
       }
       if (targetSourceFile !== undefined) {
-        addOrigins(origins, originsForExport(targetSourceFile, '*', resolver));
+        addOrigins(
+          origins,
+          originsForExportInternal(targetSourceFile, '*', resolver, context),
+        );
       }
     }
     return origins;
@@ -193,7 +262,6 @@ function originsForExportDeclaration(
     if (exportName !== '*' && exportName !== element.name.text) {
       continue;
     }
-
     const sourceName = (element.propertyName ?? element.name).text;
     if (specifier !== undefined) {
       addOrigins(origins, restrictedOriginsForSpecifier(specifier));
@@ -201,18 +269,70 @@ function originsForExportDeclaration(
     if (targetSourceFile !== undefined) {
       addOrigins(
         origins,
-        originsForExport(targetSourceFile, sourceName, resolver),
+        originsForExportInternal(
+          targetSourceFile,
+          sourceName,
+          resolver,
+          context,
+        ),
       );
     } else if (specifier === undefined) {
       const symbol = resolver.checker.getSymbolAtLocation(
         element.propertyName ?? element.name,
       );
       if (symbol !== undefined) {
-        addOrigins(origins, originsForSymbol(symbol, resolver));
+        addOrigins(
+          origins,
+          originsForSymbolInternal(symbol, resolver, context),
+        );
       }
     }
   }
+  return origins;
+}
 
+function originsForExportInternal(
+  sourceFile: ts.SourceFile,
+  exportName: string,
+  resolver: OriginResolver,
+  context: OriginContext,
+): ReadonlySet<RestrictedOrigin> {
+  const cacheKey = `${canonicalPath(sourceFile.fileName)}::${exportName}`;
+  if (context.seenExports.has(cacheKey)) {
+    return new Set();
+  }
+  context.seenExports.add(cacheKey);
+  const origins = new Set<RestrictedOrigin>();
+  const moduleSymbol = resolver.checker.getSymbolAtLocation(sourceFile);
+  if (moduleSymbol !== undefined) {
+    for (const exportedSymbol of resolver.checker.getExportsOfModule(
+      moduleSymbol,
+    )) {
+      if (exportName === '*' || exportName === exportedSymbol.getName()) {
+        addOrigins(
+          origins,
+          originsForSymbolInternal(exportedSymbol, resolver, context),
+        );
+      }
+    }
+  }
+  for (const statement of sourceFile.statements) {
+    if (ts.isExportDeclaration(statement)) {
+      addOrigins(
+        origins,
+        originsForExportDeclaration(statement, exportName, resolver, context),
+      );
+    } else if (
+      ts.isExportAssignment(statement) &&
+      (exportName === '*' || exportName === 'default')
+    ) {
+      addOrigins(
+        origins,
+        originsForExpression(statement.expression, resolver, context),
+      );
+    }
+  }
+  context.seenExports.delete(cacheKey);
   return origins;
 }
 
@@ -221,62 +341,10 @@ export function originsForExport(
   exportName: string,
   resolver: OriginResolver,
 ): ReadonlySet<RestrictedOrigin> {
-  const cacheKey = `${sourceFile.fileName}::${exportName}`;
-  const cached = resolver.exportCache.get(cacheKey);
-  if (cached !== undefined) {
-    return cached;
-  }
-  if (resolver.exportsInProgress.has(cacheKey)) {
-    return new Set();
-  }
-
-  resolver.exportsInProgress.add(cacheKey);
-  const origins = new Set<RestrictedOrigin>();
-  const moduleSymbol = resolver.checker.getSymbolAtLocation(sourceFile);
-
-  if (moduleSymbol !== undefined) {
-    for (const exportedSymbol of resolver.checker.getExportsOfModule(
-      moduleSymbol,
-    )) {
-      if (exportName === '*' || exportName === exportedSymbol.getName()) {
-        addOrigins(origins, originsForSymbol(exportedSymbol, resolver));
-      }
-    }
-  }
-
-  for (const statement of sourceFile.statements) {
-    if (ts.isExportDeclaration(statement)) {
-      addOrigins(
-        origins,
-        originsForExportDeclaration(statement, exportName, resolver),
-      );
-    } else if (
-      ts.isExportAssignment(statement) &&
-      (exportName === '*' || exportName === 'default')
-    ) {
-      addOrigins(origins, originsForExpression(statement.expression, resolver));
-    }
-  }
-
-  resolver.exportsInProgress.delete(cacheKey);
-  resolver.exportCache.set(cacheKey, origins);
-  return origins;
-}
-
-export function referencesPrismaServiceLikeSymbol(
-  sourceFile: ts.SourceFile,
-): boolean {
-  let found = false;
-
-  const visit = (node: ts.Node): void => {
-    if (ts.isIdentifier(node) && isPrismaServiceLikeName(node.text)) {
-      found = true;
-      return;
-    }
-
-    ts.forEachChild(node, visit);
-  };
-
-  visit(sourceFile);
-  return found;
+  return originsForExportInternal(
+    sourceFile,
+    exportName,
+    resolver,
+    createContext(),
+  );
 }

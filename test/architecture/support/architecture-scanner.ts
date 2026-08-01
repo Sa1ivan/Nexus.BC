@@ -1,19 +1,23 @@
-import path from 'node:path';
 import ts from 'typescript';
 import type {
   RestrictedBinding,
   RestrictedOrigin,
 } from '../types/architecture.types';
 import {
-  collectImportLikeSpecifiers,
+  collectImportLikeDependencies,
   collectUnverifiableImportLikes,
 } from './import-like-dependencies';
+import { collectApplicationPublicViolations } from './application-public';
+import { isControllerSourceFile } from './controller-detection';
+import { collectControllerHandlerViolations } from './controller-handler-delegation';
+import { resolveTerminalDependencyFiles } from './module-dependency-resolver';
 import {
   allowedSameModuleDependencies,
   classifyModuleLocation,
   isExactApplicationPublic,
   listTypeScriptFiles,
   mayUsePrisma,
+  mayUseProvider,
   modulesRoot,
   readCompilerOptions,
   resolveImport,
@@ -21,105 +25,15 @@ import {
   toSourceRelativePath,
 } from './module-paths';
 import { collectRestrictedBindings } from './restricted-binding-collector';
+import { createOriginResolver } from './restricted-origin-resolver';
 import {
-  createOriginResolver,
-  referencesPrismaServiceLikeSymbol,
-} from './restricted-origin-resolver';
-import {
-  enclosingModuleSpecifier,
+  isGeneratedPrismaSourceFile,
   isPrismaImport,
   isProviderSdkImport,
-  referencedExportName,
+  referencesPrismaServiceLikeSymbol,
+  restrictedOriginsForSpecifier,
   restrictedOriginLabel,
 } from './restricted-origin';
-
-function isNestControllerSymbol(
-  symbol: ts.Symbol,
-  checker: ts.TypeChecker,
-  seen = new Set<ts.Symbol>(),
-): boolean {
-  if (seen.has(symbol)) {
-    return false;
-  }
-  seen.add(symbol);
-
-  for (const declaration of symbol.getDeclarations() ?? []) {
-    const specifier = enclosingModuleSpecifier(declaration);
-    if (
-      specifier === '@nestjs/common' &&
-      referencedExportName(declaration) === 'Controller'
-    ) {
-      return true;
-    }
-
-    const normalizedFileName = declaration
-      .getSourceFile()
-      .fileName.split(path.sep)
-      .join('/');
-    if (
-      symbol.getName() === 'Controller' &&
-      normalizedFileName.includes('/node_modules/@nestjs/common/')
-    ) {
-      return true;
-    }
-  }
-
-  if ((symbol.flags & ts.SymbolFlags.Alias) !== 0) {
-    const aliasedSymbol = checker.getAliasedSymbol(symbol);
-    if (
-      aliasedSymbol !== symbol &&
-      isNestControllerSymbol(aliasedSymbol, checker, seen)
-    ) {
-      return true;
-    }
-  }
-
-  return false;
-}
-
-function hasNestControllerDecorator(
-  sourceFile: ts.SourceFile,
-  checker: ts.TypeChecker,
-): boolean {
-  let found = false;
-
-  const visit = (node: ts.Node): void => {
-    if (found) {
-      return;
-    }
-
-    if (ts.isClassDeclaration(node)) {
-      const decorators = ts.canHaveDecorators(node)
-        ? ts.getDecorators(node)
-        : undefined;
-      for (const decorator of decorators ?? []) {
-        const target = ts.isCallExpression(decorator.expression)
-          ? decorator.expression.expression
-          : decorator.expression;
-        const symbol = checker.getSymbolAtLocation(target);
-        if (symbol !== undefined && isNestControllerSymbol(symbol, checker)) {
-          found = true;
-          return;
-        }
-      }
-    }
-
-    ts.forEachChild(node, visit);
-  };
-
-  visit(sourceFile);
-  return found;
-}
-
-function isControllerSourceFile(
-  sourceFile: ts.SourceFile,
-  checker: ts.TypeChecker,
-): boolean {
-  return (
-    sourceFile.fileName.endsWith('.controller.ts') ||
-    hasNestControllerDecorator(sourceFile, checker)
-  );
-}
 
 function addRestrictedBindingViolations(
   bindings: readonly RestrictedBinding[],
@@ -156,11 +70,30 @@ function addRestrictedBindingViolations(
           `${relativeSourcePath} controller may not consume ${label} symbol ${binding.name}`,
         );
       }
+      if (
+        isProviderOrigin(origin) &&
+        !mayUseProvider(
+          origin,
+          sourceFilePath,
+          projectSourceRoot,
+          projectModulesRoot,
+        )
+      ) {
+        const owner =
+          origin === 'aws-sdk'
+            ? 'modules/media/infrastructure'
+            : 'modules/notifications/infrastructure';
+        violations.push(
+          `${relativeSourcePath} may not consume ${label} symbol ${binding.name} outside ${owner}`,
+        );
+      }
     }
   }
 }
 
-function isProviderOrigin(origin: RestrictedOrigin): boolean {
+function isProviderOrigin(
+  origin: RestrictedOrigin,
+): origin is 'aws-sdk' | 'resend' {
   return origin === 'aws-sdk' || origin === 'resend';
 }
 
@@ -196,7 +129,7 @@ export function findArchitectureViolations(
       projectModulesRoot,
     );
     const isController = isControllerSourceFile(sourceFile, resolver.checker);
-    const importSpecifiers = collectImportLikeSpecifiers(
+    const importDependencies = collectImportLikeDependencies(
       sourceFile,
       resolver.checker,
     );
@@ -205,6 +138,38 @@ export function findArchitectureViolations(
       resolver.checker,
     );
     const restrictedBindings = collectRestrictedBindings(sourceFile, resolver);
+
+    if (
+      sourceLocation !== undefined &&
+      sourceLocation.layer === 'application' &&
+      isExactApplicationPublic(
+        sourceFilePath,
+        sourceLocation.moduleName,
+        projectSourceRoot,
+      )
+    ) {
+      violations.push(
+        ...collectApplicationPublicViolations(
+          sourceFile,
+          relativeSourcePath,
+          sourceLocation.moduleName,
+          projectModulesRoot,
+          resolver,
+        ),
+      );
+    }
+
+    if (isController && sourceLocation !== undefined) {
+      violations.push(
+        ...collectControllerHandlerViolations(
+          sourceFile,
+          relativeSourcePath,
+          sourceLocation.moduleName,
+          projectModulesRoot,
+          resolver.checker,
+        ),
+      );
+    }
 
     for (const operation of unverifiableDependencies) {
       violations.push(
@@ -222,9 +187,20 @@ export function findArchitectureViolations(
       violations,
     );
 
-    for (const specifier of importSpecifiers) {
+    for (const dependency of importDependencies) {
+      const { specifier } = dependency;
+      const resolvedImport = resolveImport(
+        specifier,
+        sourceFilePath,
+        compilerOptions,
+      );
+      const directTargetLocation =
+        resolvedImport === undefined
+          ? undefined
+          : classifyModuleLocation(resolvedImport, projectModulesRoot);
       if (
-        isPrismaImport(specifier) &&
+        (isPrismaImport(specifier) ||
+          isGeneratedPrismaSourceFile(resolvedImport, projectSourceRoot)) &&
         !mayUsePrisma(sourceFilePath, projectSourceRoot, projectModulesRoot)
       ) {
         violations.push(
@@ -238,56 +214,73 @@ export function findArchitectureViolations(
         );
       }
 
+      for (const origin of restrictedOriginsForSpecifier(specifier)) {
+        if (
+          isProviderOrigin(origin) &&
+          !mayUseProvider(
+            origin,
+            sourceFilePath,
+            projectSourceRoot,
+            projectModulesRoot,
+          )
+        ) {
+          const owner =
+            origin === 'aws-sdk'
+              ? 'modules/media/infrastructure'
+              : 'modules/notifications/infrastructure';
+          violations.push(
+            `${relativeSourcePath} may not import ${specifier}; ${restrictedOriginLabel(origin)} belongs in ${owner}`,
+          );
+        }
+      }
+
       if (sourceLocation === undefined) {
         continue;
       }
 
-      const resolvedImport = resolveImport(
-        specifier,
+      for (const terminalFile of resolveTerminalDependencyFiles(
+        dependency,
         sourceFilePath,
-        compilerOptions,
-      );
-      if (resolvedImport === undefined) {
-        continue;
-      }
+        resolver,
+      )) {
+        const targetLocation = classifyModuleLocation(
+          terminalFile,
+          projectModulesRoot,
+        );
+        if (targetLocation === undefined) {
+          continue;
+        }
 
-      const targetLocation = classifyModuleLocation(
-        resolvedImport,
-        projectModulesRoot,
-      );
-      if (targetLocation === undefined) {
-        continue;
-      }
+        if (sourceLocation.moduleName !== targetLocation.moduleName) {
+          const entersThroughOwnerPublic =
+            resolvedImport !== undefined &&
+            directTargetLocation?.moduleName === targetLocation.moduleName &&
+            targetLocation.layer === 'application' &&
+            isExactApplicationPublic(
+              resolvedImport,
+              targetLocation.moduleName,
+              projectSourceRoot,
+            );
+          if (!entersThroughOwnerPublic) {
+            violations.push(
+              `${relativeSourcePath} crosses into ${toSourceRelativePath(terminalFile, projectSourceRoot)}; cross-module imports must target application/public.ts`,
+            );
+          }
+          continue;
+        }
 
-      if (sourceLocation.moduleName !== targetLocation.moduleName) {
         if (
-          !isExactApplicationPublic(
-            resolvedImport,
-            targetLocation.moduleName,
-            projectSourceRoot,
-          )
+          !sourceLocation.isCompositionRoot &&
+          (sourceLocation.layer === undefined ||
+            targetLocation.layer === undefined ||
+            !allowedSameModuleDependencies[sourceLocation.layer].has(
+              targetLocation.layer,
+            ))
         ) {
           violations.push(
-            `${relativeSourcePath} crosses into ${toSourceRelativePath(resolvedImport, projectSourceRoot)}; cross-module imports must target application/public.ts`,
+            `${relativeSourcePath} may not depend on ${toSourceRelativePath(terminalFile, projectSourceRoot)}`,
           );
         }
-        continue;
-      }
-
-      if (sourceLocation.isCompositionRoot) {
-        continue;
-      }
-
-      if (
-        sourceLocation.layer === undefined ||
-        targetLocation.layer === undefined ||
-        !allowedSameModuleDependencies[sourceLocation.layer].has(
-          targetLocation.layer,
-        )
-      ) {
-        violations.push(
-          `${relativeSourcePath} may not depend on ${toSourceRelativePath(resolvedImport, projectSourceRoot)}`,
-        );
       }
     }
 

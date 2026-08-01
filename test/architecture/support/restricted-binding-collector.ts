@@ -8,6 +8,7 @@ import { isCommonJsRequireCall } from './import-like-dependencies';
 import {
   originsForExport,
   originsForSymbol,
+  restrictedImportTypeBinding,
   resolveLocalSourceFile,
 } from './restricted-origin-resolver';
 import { addOrigins, restrictedOriginsForSpecifier } from './restricted-origin';
@@ -86,6 +87,13 @@ export function collectRestrictedBindings(
   }
 
   const visitRuntimeImports = (node: ts.Node): void => {
+    if (ts.isImportTypeNode(node)) {
+      const binding = restrictedImportTypeBinding(node, resolver);
+      if (binding !== undefined) {
+        bindings.push(binding);
+      }
+      return;
+    }
     if (ts.isCallExpression(node)) {
       const isDynamicImport =
         node.expression.kind === ts.SyntaxKind.ImportKeyword;

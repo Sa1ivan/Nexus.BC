@@ -1,4 +1,4 @@
-import { existsSync, readdirSync } from 'node:fs';
+import { existsSync, readdirSync, realpathSync } from 'node:fs';
 import path from 'node:path';
 import ts from 'typescript';
 import type { ModuleLayer, ModuleLocation } from '../types/architecture.types';
@@ -6,6 +6,14 @@ import type { ModuleLayer, ModuleLocation } from '../types/architecture.types';
 export const repositoryRoot = path.resolve(__dirname, '../../..');
 export const sourceRoot = path.join(repositoryRoot, 'src');
 export const modulesRoot = path.join(sourceRoot, 'modules');
+
+export function canonicalPath(filePath: string): string {
+  try {
+    return realpathSync.native(filePath);
+  } catch {
+    return path.resolve(filePath);
+  }
+}
 
 export const requiredModules = [
   'auth',
@@ -54,7 +62,10 @@ export function classifyModuleLocation(
   filePath: string,
   projectModulesRoot = modulesRoot,
 ): ModuleLocation | undefined {
-  const relativePath = path.relative(projectModulesRoot, filePath);
+  const relativePath = path.relative(
+    canonicalPath(projectModulesRoot),
+    canonicalPath(filePath),
+  );
 
   if (relativePath.startsWith('..') || path.isAbsolute(relativePath)) {
     return undefined;
@@ -107,19 +118,25 @@ export function resolveImport(
   sourceFilePath: string,
   compilerOptions: ts.CompilerOptions,
 ): string | undefined {
-  return ts.resolveModuleName(
+  const resolvedFileName = ts.resolveModuleName(
     specifier,
     sourceFilePath,
     compilerOptions,
     ts.sys,
   ).resolvedModule?.resolvedFileName;
+  return resolvedFileName === undefined
+    ? undefined
+    : canonicalPath(resolvedFileName);
 }
 
 export function toSourceRelativePath(
   filePath: string,
   projectSourceRoot = sourceRoot,
 ): string {
-  return path.relative(projectSourceRoot, filePath).split(path.sep).join('/');
+  return path
+    .relative(canonicalPath(projectSourceRoot), canonicalPath(filePath))
+    .split(path.sep)
+    .join('/');
 }
 
 export function isExactApplicationPublic(
@@ -130,19 +147,6 @@ export function isExactApplicationPublic(
   return (
     toSourceRelativePath(filePath, projectSourceRoot) ===
     `modules/${moduleName}/application/public.ts`
-  );
-}
-
-function isNamedPrismaAdapter(relativePath: string): boolean {
-  const segments = relativePath.split('/');
-  const fileName = segments.at(-1);
-  const sharedArea = segments[1];
-
-  return (
-    segments[0] === 'shared' &&
-    (sharedArea === 'idempotency' || sharedArea === 'audit') &&
-    fileName !== undefined &&
-    /^prisma(?:-[a-z0-9-]+)?\.adapter\.ts$/u.test(fileName)
   );
 }
 
@@ -158,8 +162,30 @@ export function mayUsePrisma(
 
   const relativePath = toSourceRelativePath(filePath, projectSourceRoot);
   return (
-    relativePath === 'shared/database.ts' ||
     relativePath.startsWith('shared/database/') ||
-    isNamedPrismaAdapter(relativePath)
+    relativePath === 'shared/audit/prisma-audit-writer.ts' ||
+    relativePath === 'shared/idempotency/prisma-idempotency.adapter.ts'
   );
+}
+
+export function mayUseProvider(
+  provider: 'aws-sdk' | 'resend',
+  filePath: string,
+  projectSourceRoot = sourceRoot,
+  projectModulesRoot = modulesRoot,
+): boolean {
+  if (
+    provider === 'aws-sdk' &&
+    toSourceRelativePath(filePath, projectSourceRoot) ===
+      'shared/audit/infrastructure/r2-recovery-audit-storage.ts'
+  ) {
+    return true;
+  }
+  const location = classifyModuleLocation(filePath, projectModulesRoot);
+  if (location?.layer !== 'infrastructure') {
+    return false;
+  }
+  return provider === 'aws-sdk'
+    ? location.moduleName === 'media'
+    : location.moduleName === 'notifications';
 }

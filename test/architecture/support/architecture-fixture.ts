@@ -1,4 +1,10 @@
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import {
+  mkdirSync,
+  mkdtempSync,
+  rmSync,
+  symlinkSync,
+  writeFileSync,
+} from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import type { ArchitectureFixture } from '../types/architecture.types';
@@ -26,4 +32,14 @@ export function createArchitectureFixture(
 
 export function removeArchitectureFixture(fixture: ArchitectureFixture): void {
   rmSync(fixture.projectRoot, { recursive: true, force: true });
+}
+
+export function createArchitectureSymlink(
+  fixture: ArchitectureFixture,
+  relativePath: string,
+  targetRelativePath: string,
+): void {
+  const linkPath = path.join(fixture.sourceRoot, relativePath);
+  mkdirSync(path.dirname(linkPath), { recursive: true });
+  symlinkSync(targetRelativePath, linkPath);
 }

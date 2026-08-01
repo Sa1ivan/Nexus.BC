@@ -48,10 +48,15 @@ jobs:
 
       - name: Apply database migrations
         if: ${{ hashFiles('prisma/schema.prisma') != '' }}
-        run: npx prisma migrate deploy
+        run: |
+          if [ ! -x node_modules/.bin/prisma ]; then
+            echo "Prisma schema exists but the lockfile-local Prisma CLI is missing"
+            exit 1
+          fi
+          node_modules/.bin/prisma migrate deploy
 
       - name: Verify
         run: npm run verify
 
       - name: Audit production dependencies
-        run: npm audit --omit=dev --audit-level=high
+        run: npm audit --omit=dev --audit-level=moderate

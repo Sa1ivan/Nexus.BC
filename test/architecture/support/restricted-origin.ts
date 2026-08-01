@@ -1,11 +1,10 @@
 import path from 'node:path';
 import ts from 'typescript';
 import type { RestrictedOrigin } from '../types/architecture.types';
+import { canonicalPath } from './module-paths';
 
 export function isPrismaImport(specifier: string): boolean {
-  return (
-    specifier === '@prisma/client' || specifier.startsWith('@prisma/client/')
-  );
+  return specifier.startsWith('@prisma/');
 }
 
 export function isProviderSdkImport(specifier: string): boolean {
@@ -54,11 +53,22 @@ export function isPrismaServiceLikeName(name: string): boolean {
 
 export function sourceFileOrigin(
   fileName: string,
+  sourceRoot?: string,
 ): RestrictedOrigin | undefined {
-  const normalizedFileName = fileName.split(path.sep).join('/');
+  const canonicalFileName = canonicalPath(fileName);
+  const normalizedFileName = canonicalFileName.split(path.sep).join('/');
 
-  if (normalizedFileName.includes('/node_modules/@prisma/client/')) {
+  if (normalizedFileName.includes('/node_modules/@prisma/')) {
     return 'prisma';
+  }
+  if (sourceRoot !== undefined) {
+    const relativePath = path
+      .relative(canonicalPath(sourceRoot), canonicalFileName)
+      .split(path.sep)
+      .join('/');
+    if (relativePath.startsWith('generated/prisma/')) {
+      return 'prisma';
+    }
   }
   if (normalizedFileName.includes('/node_modules/@aws-sdk/')) {
     return 'aws-sdk';
@@ -71,6 +81,16 @@ export function sourceFileOrigin(
   }
 
   return undefined;
+}
+
+export function isGeneratedPrismaSourceFile(
+  fileName: string | undefined,
+  sourceRoot: string,
+): boolean {
+  return (
+    fileName !== undefined &&
+    sourceFileOrigin(fileName, sourceRoot) === 'prisma'
+  );
 }
 
 export function enclosingModuleSpecifier(node: ts.Node): string | undefined {
@@ -127,4 +147,19 @@ export function restrictedOriginLabel(origin: RestrictedOrigin): string {
     case 'resend':
       return 'Resend';
   }
+}
+
+export function referencesPrismaServiceLikeSymbol(
+  sourceFile: ts.SourceFile,
+): boolean {
+  let found = false;
+  const visit = (node: ts.Node): void => {
+    if (ts.isIdentifier(node) && isPrismaServiceLikeName(node.text)) {
+      found = true;
+      return;
+    }
+    ts.forEachChild(node, visit);
+  };
+  visit(sourceFile);
+  return found;
 }
