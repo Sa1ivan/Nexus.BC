@@ -1,4 +1,5 @@
 import type { NextFunction, Request, Response } from 'express';
+import { ensureResponseRequestId } from './request-id.middleware';
 
 export interface CorsConfiguration {
   readonly webOrigins: readonly string[];
@@ -20,10 +21,12 @@ export function createCredentialedCorsMiddleware(
     }
 
     if (!configuration.webOrigins.includes(origin)) {
+      const requestId = ensureResponseRequestId(response);
       response.status(403).json({
         error: {
           code: 'CORS_ORIGIN_DENIED',
           message: 'The request origin is not allowed',
+          requestId,
         },
       });
       return;
