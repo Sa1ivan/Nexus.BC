@@ -55,6 +55,93 @@ const requiredOutsideTestKeys = [
   'IDEMPOTENCY_HMAC_KEYRING',
 ] as const;
 
+const invalidProductionConfigurations = [
+  {
+    label: 'additional production web origin',
+    overrides: {
+      WEB_ORIGINS: JSON.stringify([
+        allowedWebOrigin,
+        'https://admin.nexus.site',
+      ]),
+    },
+    expectedKey: 'WEB_ORIGINS',
+  },
+  {
+    label: 'non-HTTPS production web origin',
+    overrides: { WEB_ORIGINS: JSON.stringify(['http://app.nexus.site']) },
+    expectedKey: 'WEB_ORIGINS',
+  },
+  {
+    label: 'non-normalized production web origin',
+    overrides: { WEB_ORIGINS: JSON.stringify([`${allowedWebOrigin}/`]) },
+    expectedKey: 'WEB_ORIGINS',
+  },
+  {
+    label: 'non-HTTPS production privacy URL',
+    overrides: { PRIVACY_NOTICE_URL: 'http://app.nexus.site/privacy' },
+    expectedKey: 'PRIVACY_NOTICE_URL',
+  },
+  {
+    label: 'unknown booking time zone',
+    overrides: { BOOKING_TIME_ZONE: 'Mars/Olympus_Mons' },
+    expectedKey: 'BOOKING_TIME_ZONE',
+  },
+  {
+    label: 'lead retention below the lower bound',
+    overrides: { LEAD_RETENTION_DAYS: '0' },
+    expectedKey: 'LEAD_RETENTION_DAYS',
+  },
+  {
+    label: 'lead retention above the upper bound',
+    overrides: { LEAD_RETENTION_DAYS: '366' },
+    expectedKey: 'LEAD_RETENTION_DAYS',
+  },
+  {
+    label: 'access token secret shorter than 32 characters',
+    overrides: { ACCESS_TOKEN_SECRET: 'a'.repeat(31) },
+    expectedKey: 'ACCESS_TOKEN_SECRET',
+  },
+  {
+    label: 'refresh token secret shorter than 32 characters',
+    overrides: { REFRESH_TOKEN_SECRET: 'b'.repeat(31) },
+    expectedKey: 'REFRESH_TOKEN_SECRET',
+  },
+  {
+    label: 'outbox encryption key with fewer than 32 bytes',
+    overrides: {
+      OUTBOX_ENCRYPTION_KEY: Buffer.alloc(31, 1).toString('base64'),
+    },
+    expectedKey: 'OUTBOX_ENCRYPTION_KEY',
+  },
+  {
+    label: 'idempotency active version absent from its keyring',
+    overrides: { IDEMPOTENCY_HMAC_ACTIVE_KEY_VERSION: '2' },
+    expectedKey: 'IDEMPOTENCY_HMAC_ACTIVE_KEY_VERSION',
+  },
+  {
+    label: 'idempotency keyring entry shorter than 32 bytes',
+    overrides: {
+      IDEMPOTENCY_HMAC_KEYRING: JSON.stringify({
+        1: Buffer.alloc(31, 2).toString('base64'),
+      }),
+    },
+    expectedKey: 'IDEMPOTENCY_HMAC_KEYRING',
+  },
+  {
+    label: 'non-canonical idempotency keyring version',
+    overrides: {
+      IDEMPOTENCY_HMAC_KEYRING: JSON.stringify({
+        '01': Buffer.alloc(32, 2).toString('base64'),
+      }),
+    },
+    expectedKey: 'IDEMPOTENCY_HMAC_KEYRING',
+  },
+] satisfies ReadonlyArray<{
+  readonly label: string;
+  readonly overrides: Readonly<Record<string, string>>;
+  readonly expectedKey: string;
+}>;
+
 const managedEnvironmentKeys = Object.keys(completeRuntimeEnvironment);
 
 const rejectingGuard: CanActivate = {
@@ -126,6 +213,12 @@ function environmentWithout(
   );
 }
 
+function environmentWith(
+  overrides: Readonly<Record<string, string>>,
+): Record<string, string> {
+  return { ...completeRuntimeEnvironment, ...overrides };
+}
+
 function requireActiveApplication(
   app: INestApplication<App> | undefined,
 ): INestApplication<App> {
@@ -186,6 +279,24 @@ describe('runtime configuration', () => {
       }
     },
   );
+
+  it.each(invalidProductionConfigurations)(
+    'rejects $label',
+    async ({ overrides, expectedKey }) => {
+      const restoreEnvironment = replaceRuntimeEnvironment(
+        environmentWith(overrides),
+      );
+
+      try {
+        const initialization = createApplication().then(async (app) => {
+          await app.close();
+        });
+        await expect(initialization).rejects.toThrow(expectedKey);
+      } finally {
+        restoreEnvironment();
+      }
+    },
+  );
 });
 
 describe('health and credentialed CORS', () => {
@@ -215,6 +326,14 @@ describe('health and credentialed CORS', () => {
     await request(requireActiveApplication(app).getHttpServer())
       .get('/v1/health/live')
       .expect(200);
+  });
+
+  it('marks origin-less responses as varying by Origin', async () => {
+    const response = await request(
+      requireActiveApplication(app).getHttpServer(),
+    ).get('/v1/not-found');
+
+    expectVaryOrigin(response);
   });
 
   it('reports readiness unavailable when PostgreSQL is unavailable', async () => {
