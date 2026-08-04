@@ -102,7 +102,10 @@ export function findArchitectureViolations(
   projectModulesRoot = modulesRoot,
 ): string[] {
   const compilerOptions = readCompilerOptions();
-  const sourceFilePaths = listTypeScriptFiles(projectSourceRoot);
+  const sourceFilePaths = listTypeScriptFiles(projectSourceRoot).filter(
+    (sourceFilePath) =>
+      !isGeneratedPrismaSourceFile(sourceFilePath, projectSourceRoot),
+  );
   const program = ts.createProgram(sourceFilePaths, compilerOptions);
   const resolver = createOriginResolver(
     program,

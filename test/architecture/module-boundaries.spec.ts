@@ -115,4 +115,60 @@ describe('module architecture', () => {
       removeArchitectureFixture(fixture);
     }
   });
+
+  it('skips generated Prisma scan roots while still rejecting their consumers', () => {
+    const fixture = createArchitectureFixture({
+      'generated/prisma/client.ts': `
+        import type { PrismaClient as RuntimePrismaClient } from '@prisma/client';
+        import type { S3Client } from '@aws-sdk/client-s3';
+        export type PrismaClient = RuntimePrismaClient;
+        export type StorageClient = S3Client;
+      `,
+      'modules/auth/application/generated-consumer.ts': `
+        import type {
+          PrismaClient,
+          StorageClient,
+        } from '../../../generated/prisma/client';
+        export type GeneratedClient = PrismaClient;
+        export type GeneratedStorageClient = StorageClient;
+      `,
+    });
+
+    try {
+      expect(
+        findArchitectureViolations(fixture.sourceRoot, fixture.modulesRoot),
+      ).toEqual([
+        'modules/auth/application/generated-consumer.ts may not consume Prisma-origin symbol PrismaClient outside approved infrastructure adapters',
+        'modules/auth/application/generated-consumer.ts may not consume AWS SDK symbol PrismaClient outside modules/media/infrastructure',
+        'modules/auth/application/generated-consumer.ts may not consume Prisma-origin symbol StorageClient outside approved infrastructure adapters',
+        'modules/auth/application/generated-consumer.ts may not consume AWS SDK symbol StorageClient outside modules/media/infrastructure',
+        'modules/auth/application/generated-consumer.ts may not import ../../../generated/prisma/client; Prisma access belongs in approved infrastructure adapters',
+      ]);
+    } finally {
+      removeArchitectureFixture(fixture);
+    }
+  });
+
+  it('rejects direct application access to the Prisma service token', () => {
+    const fixture = createArchitectureFixture({
+      'shared/database/prisma.service.ts': `
+        export const PrismaClientService = Symbol('PrismaClientService');
+      `,
+      'modules/auth/application/prisma-token-consumer.ts': `
+        import { PrismaClientService } from '../../../shared/database/prisma.service';
+        export const leakedDatabaseToken = PrismaClientService;
+      `,
+    });
+
+    try {
+      expect(
+        findArchitectureViolations(fixture.sourceRoot, fixture.modulesRoot),
+      ).toEqual([
+        'modules/auth/application/prisma-token-consumer.ts may not consume PrismaService-like symbol PrismaClientService outside approved infrastructure adapters',
+        'modules/auth/application/prisma-token-consumer.ts may not reference PrismaService outside approved infrastructure adapters',
+      ]);
+    } finally {
+      removeArchitectureFixture(fixture);
+    }
+  });
 });

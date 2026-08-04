@@ -27,8 +27,10 @@ export interface ArchitectureFixture {
 export interface OriginResolver {
   readonly checker: ts.TypeChecker;
   readonly compilerOptions: ts.CompilerOptions;
+  readonly exportOriginCache: Map<string, ReadonlySet<RestrictedOrigin>>;
   readonly program: ts.Program;
   readonly sourceRoot: string;
+  readonly symbolOriginCache: Map<ts.Symbol, ReadonlySet<RestrictedOrigin>>;
 }
 
 export interface RestrictedBinding {

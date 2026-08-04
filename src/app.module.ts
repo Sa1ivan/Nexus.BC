@@ -8,6 +8,8 @@ import { SitesModule } from './modules/sites/sites.module';
 import { WorkspacesModule } from './modules/workspaces/workspaces.module';
 import { AppConfigModule } from './shared/config/app-config.module';
 import { APP_CONFIG } from './shared/config/app-config.schema';
+import { PrismaModule } from './shared/database/prisma.module';
+import { HealthController } from './shared/health/health.controller';
 import { createApiErrorFilter } from './shared/http/api-error.filter';
 import { createCredentialedCorsMiddleware } from './shared/http/credentialed-cors.middleware';
 import type { CorsConfiguration } from './shared/http/credentialed-cors.middleware';
@@ -22,6 +24,7 @@ interface MiddlewareRouteConsumer {
 @Module({
   imports: [
     AppConfigModule,
+    PrismaModule,
     AuthModule,
     WorkspacesModule,
     SitesModule,
@@ -29,6 +32,7 @@ interface MiddlewareRouteConsumer {
     FormsModule,
     NotificationsModule,
   ],
+  controllers: [HealthController],
   providers: [
     {
       provide: APP_FILTER,

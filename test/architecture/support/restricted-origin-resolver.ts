@@ -4,7 +4,10 @@ import type {
   OriginResolver,
   RestrictedOrigin,
 } from '../types/architecture.types';
-import { importTypeBindingName } from './import-like-dependencies';
+import {
+  collectImportLikeDependencies,
+  importTypeBindingName,
+} from './import-like-dependencies';
 import { canonicalPath, resolveImport } from './module-paths';
 import {
   addOrigins,
@@ -20,12 +23,19 @@ import {
 } from './restricted-type-origin';
 
 interface OriginContext {
+  readonly nonCacheableExports: Set<string>;
+  readonly nonCacheableSymbols: Set<ts.Symbol>;
   readonly seenExports: Set<string>;
   readonly seenSymbols: Set<ts.Symbol>;
 }
 
 function createContext(): OriginContext {
-  return { seenExports: new Set(), seenSymbols: new Set() };
+  return {
+    nonCacheableExports: new Set(),
+    nonCacheableSymbols: new Set(),
+    seenExports: new Set(),
+    seenSymbols: new Set(),
+  };
 }
 
 export function createOriginResolver(
@@ -36,9 +46,20 @@ export function createOriginResolver(
   return {
     checker: program.getTypeChecker(),
     compilerOptions,
+    exportOriginCache: new Map(),
     program,
     sourceRoot,
+    symbolOriginCache: new Map(),
   };
+}
+
+function markActiveOriginsNonCacheable(context: OriginContext): void {
+  for (const cacheKey of context.seenExports) {
+    context.nonCacheableExports.add(cacheKey);
+  }
+  for (const symbol of context.seenSymbols) {
+    context.nonCacheableSymbols.add(symbol);
+  }
 }
 
 function isWithinSourceRoot(fileName: string, sourceRoot: string): boolean {
@@ -47,6 +68,69 @@ function isWithinSourceRoot(fileName: string, sourceRoot: string): boolean {
     canonicalPath(fileName),
   );
   return !relativePath.startsWith('..') && !path.isAbsolute(relativePath);
+}
+
+function collectGeneratedSourceOrigins(
+  entrySourceFile: ts.SourceFile,
+  resolver: OriginResolver,
+): ReadonlySet<RestrictedOrigin> {
+  const origins = new Set<RestrictedOrigin>();
+  const seenFiles = new Set<string>();
+
+  const visit = (sourceFile: ts.SourceFile): void => {
+    const sourceFileKey = canonicalPath(sourceFile.fileName);
+    if (seenFiles.has(sourceFileKey)) {
+      return;
+    }
+    seenFiles.add(sourceFileKey);
+
+    const ownOrigin = sourceFileOrigin(
+      sourceFile.fileName,
+      resolver.sourceRoot,
+    );
+    if (ownOrigin !== undefined) {
+      origins.add(ownOrigin);
+    }
+
+    for (const dependency of collectImportLikeDependencies(
+      sourceFile,
+      resolver.checker,
+    )) {
+      addOrigins(origins, restrictedOriginsForSpecifier(dependency.specifier));
+      const resolvedFileName = resolveImport(
+        dependency.specifier,
+        sourceFile.fileName,
+        resolver.compilerOptions,
+      );
+      if (resolvedFileName === undefined) {
+        continue;
+      }
+      const resolvedOrigin = sourceFileOrigin(
+        resolvedFileName,
+        resolver.sourceRoot,
+      );
+      if (resolvedOrigin !== undefined) {
+        origins.add(resolvedOrigin);
+      }
+      if (!isWithinSourceRoot(resolvedFileName, resolver.sourceRoot)) {
+        continue;
+      }
+      const target =
+        resolver.program.getSourceFile(resolvedFileName) ??
+        resolver.program
+          .getSourceFiles()
+          .find(
+            (candidate) =>
+              canonicalPath(candidate.fileName) === resolvedFileName,
+          );
+      if (target !== undefined) {
+        visit(target);
+      }
+    }
+  };
+
+  visit(entrySourceFile);
+  return origins;
 }
 
 export function resolveLocalSourceFile(
@@ -102,7 +186,12 @@ function originsForSymbolInternal(
   resolver: OriginResolver,
   context: OriginContext,
 ): ReadonlySet<RestrictedOrigin> {
+  const cached = resolver.symbolOriginCache.get(symbol);
+  if (cached !== undefined) {
+    return cached;
+  }
   if (context.seenSymbols.has(symbol)) {
+    markActiveOriginsNonCacheable(context);
     return new Set();
   }
   context.seenSymbols.add(symbol);
@@ -118,6 +207,19 @@ function originsForSymbolInternal(
     );
     if (fileOrigin !== undefined) {
       origins.add(fileOrigin);
+      if (
+        fileOrigin === 'prisma' &&
+        isWithinSourceRoot(
+          declaration.getSourceFile().fileName,
+          resolver.sourceRoot,
+        )
+      ) {
+        addOrigins(
+          origins,
+          collectGeneratedSourceOrigins(declaration.getSourceFile(), resolver),
+        );
+        continue;
+      }
     }
     const specifier = enclosingModuleSpecifier(declaration);
     if (specifier !== undefined) {
@@ -172,6 +274,9 @@ function originsForSymbolInternal(
     }
   }
   context.seenSymbols.delete(symbol);
+  if (!context.nonCacheableSymbols.has(symbol)) {
+    resolver.symbolOriginCache.set(symbol, new Set(origins));
+  }
   return origins;
 }
 
@@ -298,7 +403,12 @@ function originsForExportInternal(
   context: OriginContext,
 ): ReadonlySet<RestrictedOrigin> {
   const cacheKey = `${canonicalPath(sourceFile.fileName)}::${exportName}`;
+  const cached = resolver.exportOriginCache.get(cacheKey);
+  if (cached !== undefined) {
+    return cached;
+  }
   if (context.seenExports.has(cacheKey)) {
+    markActiveOriginsNonCacheable(context);
     return new Set();
   }
   context.seenExports.add(cacheKey);
@@ -333,6 +443,9 @@ function originsForExportInternal(
     }
   }
   context.seenExports.delete(cacheKey);
+  if (!context.nonCacheableExports.has(cacheKey)) {
+    resolver.exportOriginCache.set(cacheKey, new Set(origins));
+  }
   return origins;
 }
 
