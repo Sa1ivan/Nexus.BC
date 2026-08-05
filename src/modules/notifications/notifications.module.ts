@@ -1,7 +1,8 @@
-import { Module } from '@nestjs/common';
+import { Global, Module } from '@nestjs/common';
 import { NOTIFICATION_ENQUEUE } from './application/public';
 import { PrismaOutbox } from './infrastructure/prisma-outbox';
 
+@Global()
 @Module({
   providers: [
     PrismaOutbox,

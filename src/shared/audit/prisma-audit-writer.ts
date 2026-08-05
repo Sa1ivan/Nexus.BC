@@ -1,8 +1,10 @@
 import { Injectable } from '@nestjs/common';
 import type {
   AppendedAuditEvent,
+  AuditEventRequest,
   AuditWriter,
   LeadSubmittedAuditEvent,
+  MembershipRoleChangedAuditEvent,
 } from './audit-writer';
 import type { TransactionContext } from '../database/transaction-runner';
 import {
@@ -57,15 +59,39 @@ function assertLeadSubmittedEvent(event: LeadSubmittedAuditEvent): void {
   }
 }
 
+function assertMembershipRoleChangedEvent(
+  event: MembershipRoleChangedAuditEvent,
+): void {
+  const { metadata } = event;
+  if (
+    !uuidPattern.test(event.workspaceId) ||
+    !uuidPattern.test(event.actorUserId) ||
+    event.resourceId.split(':').length !== 2 ||
+    !event.resourceId.split(':').every((value) => uuidPattern.test(value)) ||
+    typeof metadata !== 'object' ||
+    metadata === null ||
+    Object.keys(metadata).sort().join(',') !== 'fromRole,toRole' ||
+    !['OWNER', 'EDITOR'].includes(metadata.fromRole) ||
+    !['OWNER', 'EDITOR'].includes(metadata.toRole) ||
+    metadata.fromRole === metadata.toRole
+  ) {
+    throw new Error('MEMBERSHIP_ROLE_CHANGED metadata is not allowlisted');
+  }
+}
+
 @Injectable()
 export class PrismaAuditWriter implements AuditWriter {
   constructor(private readonly transactions: TransactionRunner) {}
 
   async append(
     context: TransactionContext,
-    event: LeadSubmittedAuditEvent,
+    event: AuditEventRequest,
   ): Promise<AppendedAuditEvent> {
-    assertLeadSubmittedEvent(event);
+    if (event.action === 'LEAD_SUBMITTED') {
+      assertLeadSubmittedEvent(event);
+    } else {
+      assertMembershipRoleChangedEvent(event);
+    }
 
     return this.transactions[PrismaTransactionClientService](
       context,
@@ -102,10 +128,16 @@ export class PrismaAuditWriter implements AuditWriter {
             action: event.action,
             resourceType: event.resourceType,
             resourceId: event.resourceId,
-            metadata: {
-              releaseId: event.metadata.releaseId,
-              outcome: event.metadata.outcome,
-            },
+            metadata:
+              event.action === 'LEAD_SUBMITTED'
+                ? {
+                    releaseId: event.metadata.releaseId,
+                    outcome: event.metadata.outcome,
+                  }
+                : {
+                    fromRole: event.metadata.fromRole,
+                    toRole: event.metadata.toRole,
+                  },
             requestId: event.requestId,
           },
         });

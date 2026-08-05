@@ -16,6 +16,23 @@ export interface LeadSubmittedAuditEvent {
   readonly requestId: string;
 }
 
+export interface MembershipRoleChangedAuditEvent {
+  readonly eventId: string;
+  readonly workspaceId: string;
+  readonly actorUserId: string;
+  readonly action: 'MEMBERSHIP_ROLE_CHANGED';
+  readonly resourceType: 'Membership';
+  readonly resourceId: string;
+  readonly metadata: {
+    readonly fromRole: 'OWNER' | 'EDITOR';
+    readonly toRole: 'OWNER' | 'EDITOR';
+  };
+  readonly requestId: string;
+}
+
+export type AuditEventRequest =
+  LeadSubmittedAuditEvent | MembershipRoleChangedAuditEvent;
+
 export interface AppendedAuditEvent {
   readonly eventId: string;
   readonly sequence: bigint;
@@ -24,6 +41,6 @@ export interface AppendedAuditEvent {
 export interface AuditWriter {
   append(
     context: TransactionContext,
-    event: LeadSubmittedAuditEvent,
+    event: AuditEventRequest,
   ): Promise<AppendedAuditEvent>;
 }

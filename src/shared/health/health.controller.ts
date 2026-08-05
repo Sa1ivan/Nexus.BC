@@ -8,7 +8,9 @@ import {
   DATABASE_READINESS,
   type DatabaseReadiness,
 } from '../database/database-readiness';
+import { Public } from '../http/public.decorator';
 
+@Public()
 @Controller('v1/health')
 export class HealthController {
   constructor(

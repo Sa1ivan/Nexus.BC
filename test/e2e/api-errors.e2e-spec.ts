@@ -15,6 +15,7 @@ import request from 'supertest';
 import type { App } from 'supertest/types';
 import { AppModule } from '../../src/app.module';
 import { createApiHttpException } from '../../src/shared/http/api-error.filter';
+import { Public } from '../../src/shared/http/public.decorator';
 
 interface ErrorBody {
   readonly code: string;
@@ -23,6 +24,7 @@ interface ErrorBody {
   readonly details?: unknown;
 }
 
+@Public()
 @Controller('__test/errors')
 class ErrorProbeController {
   @Get('validation')
