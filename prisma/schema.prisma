@@ -14,6 +14,15 @@ enum WorkspaceRole {
   EDITOR
 }
 
+enum OutboxDeliveryState {
+  READY
+  SENDING
+  UNKNOWN
+  DELIVERED
+  DEAD_LETTER
+  CANCELLED
+}
+
 model User {
   id                      String                   @id @default(uuid()) @db.Uuid
   email                   String                   @unique @db.VarChar(320)
@@ -86,6 +95,38 @@ model PasswordResetToken {
   user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, expiresAt])
+}
+
+model Outbox {
+  id                           String              @id @default(uuid()) @db.Uuid
+  eventId                      String              @unique @db.Uuid
+  businessIdempotencyKey       String              @unique @db.VarChar(256)
+  kind                         String
+  aggregateType                String
+  aggregateId                  String
+  payload                      Json
+  secretCiphertext             Bytes?
+  secretExpiresAt              DateTime?
+  secretRedactedAt             DateTime?
+  availableAt                  DateTime            @default(now())
+  state                        OutboxDeliveryState @default(READY)
+  lockedUntil                  DateTime?
+  lockedBy                     String?
+  claimToken                   String?             @db.Uuid
+  attemptOrdinal               Int?
+  attempts                     Int                 @default(0)
+  maxAttempts                  Int                 @default(10)
+  deliveredAt                  DateTime?
+  deadLetterAt                 DateTime?
+  cancelledAt                  DateTime?
+  lastErrorCode                String?
+  providerMessageId            String?             @db.VarChar(128)
+  providerOutcomeCode          String?             @db.VarChar(64)
+  providerOutcomeObservedAt    DateTime?
+  providerIdempotencyExpiresAt DateTime?
+  createdAt                    DateTime            @default(now())
+
+  @@index([deliveredAt, deadLetterAt, availableAt, lockedUntil])
 }
 
 model AuditEvent {

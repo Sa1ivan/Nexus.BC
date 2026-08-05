@@ -171,4 +171,70 @@ describe('module architecture', () => {
       removeArchitectureFixture(fixture);
     }
   });
+
+  it('allows only the opaque shared transaction context in application public ports', () => {
+    const fixture = createArchitectureFixture({
+      'shared/database/transaction-runner.ts': `
+        declare const transactionContextBrand: unique symbol;
+
+        export interface TransactionContext {
+          readonly [transactionContextBrand]: true;
+        }
+        export interface DatabaseClient {
+          readonly query: unknown;
+        }
+      `,
+      'modules/auth/application/public.ts': `
+        import type {
+          DatabaseClient,
+          TransactionContext,
+        } from '../../../shared/database/transaction-runner';
+
+        export interface TransactionAwarePort {
+          run(context: TransactionContext): Promise<void>;
+        }
+
+        export interface LeakyDatabasePort {
+          run(client: DatabaseClient): Promise<void>;
+        }
+      `,
+    });
+
+    try {
+      expect(
+        findArchitectureViolations(fixture.sourceRoot, fixture.modulesRoot),
+      ).toEqual([
+        'modules/auth/application/public.ts application/public.ts may not export LeakyDatabasePort; only same-module application type/interface contracts and Symbol DI tokens are public',
+      ]);
+    } finally {
+      removeArchitectureFixture(fixture);
+    }
+  });
+
+  it('rejects a leaky shared transaction context despite its exact name and path', () => {
+    const fixture = createArchitectureFixture({
+      'shared/database/transaction-runner.ts': `
+        export interface TransactionContext {
+          readonly client: unknown;
+        }
+      `,
+      'modules/auth/application/public.ts': `
+        import type { TransactionContext } from '../../../shared/database/transaction-runner';
+
+        export interface LeakyTransactionPort {
+          run(context: TransactionContext): Promise<void>;
+        }
+      `,
+    });
+
+    try {
+      expect(
+        findArchitectureViolations(fixture.sourceRoot, fixture.modulesRoot),
+      ).toEqual([
+        'modules/auth/application/public.ts application/public.ts may not export LeakyTransactionPort; only same-module application type/interface contracts and Symbol DI tokens are public',
+      ]);
+    } finally {
+      removeArchitectureFixture(fixture);
+    }
+  });
 });

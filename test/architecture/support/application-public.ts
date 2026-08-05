@@ -4,11 +4,13 @@ import type { OriginResolver } from '../types/architecture.types';
 import { canonicalPath, classifyModuleLocation } from './module-paths';
 
 function hasExportModifier(node: ts.Node): boolean {
+  return hasModifier(node, ts.SyntaxKind.ExportKeyword);
+}
+
+function hasModifier(node: ts.Node, kind: ts.ModifierSyntaxKind): boolean {
   return (
     ts.canHaveModifiers(node) &&
-    (ts.getModifiers(node) ?? []).some(
-      (modifier) => modifier.kind === ts.SyntaxKind.ExportKeyword,
-    )
+    (ts.getModifiers(node) ?? []).some((modifier) => modifier.kind === kind)
   );
 }
 
@@ -100,6 +102,91 @@ function isWithinProjectSource(
   return !relativePath.startsWith('..') && !path.isAbsolute(relativePath);
 }
 
+function isOpaqueTransactionContextReference(
+  symbol: ts.Symbol,
+  resolver: OriginResolver,
+): boolean {
+  if (symbol.getName() !== 'TransactionContext') {
+    return false;
+  }
+  const declarations = symbol.getDeclarations() ?? [];
+  const expectedSource = canonicalPath(
+    path.join(
+      resolver.sourceRoot,
+      'shared',
+      'database',
+      'transaction-runner.ts',
+    ),
+  );
+
+  const isOpaqueBrandDeclaration = (declaration: ts.Declaration): boolean => {
+    if (
+      !ts.isVariableDeclaration(declaration) ||
+      !ts.isIdentifier(declaration.name) ||
+      declaration.name.text !== 'transactionContextBrand' ||
+      declaration.initializer !== undefined ||
+      declaration.type === undefined ||
+      !ts.isTypeOperatorNode(declaration.type) ||
+      declaration.type.operator !== ts.SyntaxKind.UniqueKeyword ||
+      declaration.type.type.kind !== ts.SyntaxKind.SymbolKeyword ||
+      canonicalPath(declaration.getSourceFile().fileName) !== expectedSource
+    ) {
+      return false;
+    }
+
+    const declarationList = declaration.parent;
+    const statement = declarationList.parent;
+    return (
+      ts.isVariableDeclarationList(declarationList) &&
+      (declarationList.flags & ts.NodeFlags.Const) !== 0 &&
+      ts.isVariableStatement(statement) &&
+      hasModifier(statement, ts.SyntaxKind.DeclareKeyword) &&
+      !hasExportModifier(statement)
+    );
+  };
+
+  const hasOpaqueBrandMember = (member: ts.TypeElement): boolean => {
+    if (
+      !ts.isPropertySignature(member) ||
+      !hasModifier(member, ts.SyntaxKind.ReadonlyKeyword) ||
+      member.questionToken !== undefined ||
+      member.initializer !== undefined ||
+      !ts.isComputedPropertyName(member.name) ||
+      !ts.isIdentifier(member.name.expression) ||
+      member.type === undefined ||
+      !ts.isLiteralTypeNode(member.type) ||
+      member.type.literal.kind !== ts.SyntaxKind.TrueKeyword
+    ) {
+      return false;
+    }
+
+    const brandSymbol = resolver.checker.getSymbolAtLocation(
+      member.name.expression,
+    );
+    return (
+      brandSymbol !== undefined &&
+      (brandSymbol.getDeclarations() ?? []).length === 1 &&
+      (brandSymbol.getDeclarations() ?? []).every(isOpaqueBrandDeclaration)
+    );
+  };
+
+  return (
+    declarations.length === 1 &&
+    declarations.every(
+      (declaration) =>
+        ts.isInterfaceDeclaration(declaration) &&
+        declaration.name.text === 'TransactionContext' &&
+        canonicalPath(declaration.getSourceFile().fileName) ===
+          expectedSource &&
+        hasExportModifier(declaration) &&
+        declaration.typeParameters === undefined &&
+        declaration.heritageClauses === undefined &&
+        declaration.members.length === 1 &&
+        declaration.members.every(hasOpaqueBrandMember),
+    )
+  );
+}
+
 function isAllowedTypeReference(
   symbol: ts.Symbol,
   rootDeclaration: ts.Declaration,
@@ -112,6 +199,9 @@ function isAllowedTypeReference(
     (symbol.flags & ts.SymbolFlags.Alias) !== 0
       ? resolver.checker.getAliasedSymbol(symbol)
       : symbol;
+  if (isOpaqueTransactionContextReference(target, resolver)) {
+    return true;
+  }
   if (seenSymbols.has(target)) {
     return true;
   }
