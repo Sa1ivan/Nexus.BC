@@ -30,6 +30,16 @@ export function createArchitectureFixture(
   };
 }
 
+export function createArchitectureProjectFile(
+  fixture: ArchitectureFixture,
+  relativePath: string,
+  contents: string,
+): void {
+  const filePath = path.join(fixture.projectRoot, relativePath);
+  mkdirSync(path.dirname(filePath), { recursive: true });
+  writeFileSync(filePath, contents, 'utf8');
+}
+
 export function removeArchitectureFixture(fixture: ArchitectureFixture): void {
   rmSync(fixture.projectRoot, { recursive: true, force: true });
 }

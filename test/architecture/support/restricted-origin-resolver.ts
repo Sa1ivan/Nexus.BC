@@ -29,6 +29,11 @@ interface OriginContext {
   readonly seenSymbols: Set<ts.Symbol>;
 }
 
+interface ExternalSymbolNode {
+  readonly dependencies: ReadonlySet<ts.Symbol>;
+  readonly origins: ReadonlySet<RestrictedOrigin>;
+}
+
 function createContext(): OriginContext {
   return {
     nonCacheableExports: new Set(),
@@ -46,6 +51,7 @@ export function createOriginResolver(
   return {
     checker: program.getTypeChecker(),
     compilerOptions,
+    externalSymbolOriginCache: new Map(),
     exportOriginCache: new Map(),
     program,
     sourceRoot,
@@ -133,6 +139,119 @@ function collectGeneratedSourceOrigins(
   return origins;
 }
 
+function externalSymbolNode(
+  symbol: ts.Symbol,
+  resolver: OriginResolver,
+): ExternalSymbolNode {
+  const dependencies = new Set<ts.Symbol>();
+  const origins = new Set<RestrictedOrigin>();
+  for (const declaration of symbol.getDeclarations() ?? []) {
+    const sourceFile = declaration.getSourceFile();
+    const ownOrigin = sourceFileOrigin(
+      sourceFile.fileName,
+      resolver.sourceRoot,
+    );
+    if (ownOrigin !== undefined) {
+      origins.add(ownOrigin);
+    }
+    const specifier = enclosingModuleSpecifier(declaration);
+    if (specifier !== undefined) {
+      addOrigins(origins, restrictedOriginsForSpecifier(specifier));
+      continue;
+    }
+
+    const visit = (node: ts.Node): void => {
+      if (ts.isIdentifier(node)) {
+        const referencedSymbol = resolver.checker.getSymbolAtLocation(node);
+        if (
+          referencedSymbol !== undefined &&
+          referencedSymbol !== symbol &&
+          (referencedSymbol.getDeclarations() ?? []).some(
+            (referencedDeclaration) =>
+              !isWithinSourceRoot(
+                referencedDeclaration.getSourceFile().fileName,
+                resolver.sourceRoot,
+              ),
+          )
+        ) {
+          dependencies.add(referencedSymbol);
+        }
+      }
+      ts.forEachChild(node, visit);
+    };
+    visit(declaration);
+  }
+
+  if ((symbol.flags & ts.SymbolFlags.Alias) !== 0) {
+    const aliasedSymbol = resolver.checker.getAliasedSymbol(symbol);
+    if (aliasedSymbol !== symbol) {
+      dependencies.add(aliasedSymbol);
+    }
+  }
+
+  return { dependencies, origins };
+}
+
+function collectExternalSymbolOrigins(
+  entrySymbol: ts.Symbol,
+  resolver: OriginResolver,
+): ReadonlySet<RestrictedOrigin> {
+  const cached = resolver.externalSymbolOriginCache.get(entrySymbol);
+  if (cached !== undefined) {
+    return cached;
+  }
+
+  const graph = new Map<ts.Symbol, ExternalSymbolNode>();
+  const pending = [entrySymbol];
+  while (pending.length > 0) {
+    const symbol = pending.pop();
+    if (
+      symbol === undefined ||
+      graph.has(symbol) ||
+      resolver.externalSymbolOriginCache.has(symbol)
+    ) {
+      continue;
+    }
+    const node = externalSymbolNode(symbol, resolver);
+    graph.set(symbol, node);
+    for (const dependency of node.dependencies) {
+      pending.push(dependency);
+    }
+  }
+
+  const resolvedOrigins = new Map<ts.Symbol, Set<RestrictedOrigin>>();
+  for (const [symbol, node] of graph) {
+    resolvedOrigins.set(symbol, new Set(node.origins));
+  }
+
+  let changed: boolean;
+  do {
+    changed = false;
+    for (const [symbol, node] of graph) {
+      const origins = resolvedOrigins.get(symbol);
+      if (origins === undefined) {
+        continue;
+      }
+      for (const dependency of node.dependencies) {
+        const dependencyOrigins =
+          resolver.externalSymbolOriginCache.get(dependency) ??
+          resolvedOrigins.get(dependency);
+        if (dependencyOrigins === undefined) {
+          continue;
+        }
+        const previousSize = origins.size;
+        addOrigins(origins, dependencyOrigins);
+        changed ||= origins.size !== previousSize;
+      }
+    }
+  } while (changed);
+
+  for (const [symbol, origins] of resolvedOrigins) {
+    resolver.externalSymbolOriginCache.set(symbol, new Set(origins));
+  }
+  return resolver.externalSymbolOriginCache.get(entrySymbol) ?? new Set();
+}
+
 export function resolveLocalSourceFile(
   specifier: string,
   containingFile: string,
@@ -201,25 +320,28 @@ function originsForSymbolInternal(
   }
 
   for (const declaration of symbol.getDeclarations() ?? []) {
+    const declarationFileName = declaration.getSourceFile().fileName;
+    const declarationIsLocal = isWithinSourceRoot(
+      declarationFileName,
+      resolver.sourceRoot,
+    );
     const fileOrigin = sourceFileOrigin(
-      declaration.getSourceFile().fileName,
+      declarationFileName,
       resolver.sourceRoot,
     );
     if (fileOrigin !== undefined) {
       origins.add(fileOrigin);
-      if (
-        fileOrigin === 'prisma' &&
-        isWithinSourceRoot(
-          declaration.getSourceFile().fileName,
-          resolver.sourceRoot,
-        )
-      ) {
+      if (fileOrigin === 'prisma' && declarationIsLocal) {
         addOrigins(
           origins,
           collectGeneratedSourceOrigins(declaration.getSourceFile(), resolver),
         );
         continue;
       }
+    }
+    if (!declarationIsLocal) {
+      addOrigins(origins, collectExternalSymbolOrigins(symbol, resolver));
+      continue;
     }
     const specifier = enclosingModuleSpecifier(declaration);
     if (specifier !== undefined) {

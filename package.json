@@ -19,11 +19,11 @@
     "start:prod": "node dist/main",
     "lint": "eslint \"src/**/*.ts\" \"test/**/*.ts\" --max-warnings=0",
     "architecture": "jest --runInBand --testPathPatterns=test/architecture",
-    "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js --runInBand --testPathPatterns=src/ --passWithNoTests",
+    "test": "node --require argon2 --experimental-vm-modules node_modules/jest/bin/jest.js --runInBand --testPathPatterns=src/ --passWithNoTests",
     "test:watch": "jest --watch",
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
-    "test:e2e": "node --experimental-vm-modules node_modules/jest/bin/jest.js --config ./test/jest-e2e.json --runInBand",
+    "test:e2e": "node --require argon2 --experimental-vm-modules node_modules/jest/bin/jest.js --config ./test/jest-e2e.json --runInBand",
     "prisma:generate": "prisma generate",
     "preverify": "npm run prisma:generate",
     "verify": "npm run lint && npm run architecture && npm run test && npm run test:e2e && npm run build && npm run format:check"

@@ -1,12 +1,23 @@
 import { existsSync } from 'node:fs';
 import path from 'node:path';
+import ts from 'typescript';
 import {
+  createArchitectureProjectFile,
   createArchitectureSymlink,
   createArchitectureFixture,
   removeArchitectureFixture,
 } from './support/architecture-fixture';
 import { findArchitectureViolations } from './support/architecture-scanner';
-import { modulesRoot, requiredModules } from './support/module-paths';
+import {
+  modulesRoot,
+  readCompilerOptions,
+  requiredModules,
+  sourceRoot,
+} from './support/module-paths';
+import {
+  createOriginResolver,
+  originsForExport,
+} from './support/restricted-origin-resolver';
 import { p101ExpectedViolations } from './support/p101-expected-violations';
 import { p101FixtureFiles } from './support/p101-fixture-files';
 import { p101RegressionExpectedViolations } from './support/p101-regression-expected-violations';
@@ -24,6 +35,178 @@ describe('module architecture', () => {
     });
 
     expect(missingCompositionRoots).toEqual([]);
+  });
+
+  it('does not traverse unrestricted external type graphs', () => {
+    const compilerOptions = readCompilerOptions();
+    const requestContractPath = path.join(
+      sourceRoot,
+      'shared/http/request-contract.ts',
+    );
+    const program = ts.createProgram([requestContractPath], compilerOptions);
+    const sourceFile = program.getSourceFile(requestContractPath);
+    if (sourceFile === undefined) {
+      throw new Error('Unable to parse shared/http/request-contract.ts');
+    }
+    const resolver = createOriginResolver(program, compilerOptions, sourceRoot);
+
+    expect([...originsForExport(sourceFile, 'readCookie', resolver)]).toEqual(
+      [],
+    );
+  });
+
+  it('detects restricted origins hidden behind an external type facade', () => {
+    const fixture = createArchitectureFixture({
+      'shared/external-wrapper.ts': `
+        import type { Facade } from 'prisma-facade';
+        export type HiddenFacade = Facade;
+      `,
+      'shared/safe-external-wrapper.ts': `
+        import type { SafeFacade } from 'mixed-facade';
+        export type SafeExternalFacade = SafeFacade;
+      `,
+      'shared/cyclic-external-wrapper.ts': `
+        import type { CyclicA } from 'cyclic-facade-a';
+        import type { CyclicB } from 'cyclic-facade-b';
+        export type HiddenCyclicA = CyclicA;
+        export type HiddenCyclicB = CyclicB;
+      `,
+      'modules/auth/application/facade-consumer.ts': `
+        import type { HiddenFacade } from '../../../shared/external-wrapper';
+        import type { SafeExternalFacade } from '../../../shared/safe-external-wrapper';
+        import type { HiddenCyclicA, HiddenCyclicB } from '../../../shared/cyclic-external-wrapper';
+        export interface FacadeConsumer {
+          readonly client: HiddenFacade;
+          readonly safe: SafeExternalFacade;
+          readonly cyclicA: HiddenCyclicA;
+          readonly cyclicB: HiddenCyclicB;
+        }
+      `,
+    });
+    createArchitectureProjectFile(
+      fixture,
+      'node_modules/prisma-facade/package.json',
+      JSON.stringify({ name: 'prisma-facade', types: 'index.d.ts' }),
+    );
+    createArchitectureProjectFile(
+      fixture,
+      'node_modules/prisma-facade/index.d.ts',
+      `
+        import type { NestedFacade } from 'nested-facade';
+        export interface Facade extends NestedFacade {}
+      `,
+    );
+    createArchitectureProjectFile(
+      fixture,
+      'node_modules/cyclic-facade-a/package.json',
+      JSON.stringify({ name: 'cyclic-facade-a', types: 'index.d.ts' }),
+    );
+    createArchitectureProjectFile(
+      fixture,
+      'node_modules/cyclic-facade-a/index.d.ts',
+      `
+        import type { CyclicB } from 'cyclic-facade-b';
+        import type { PrismaClient } from '@prisma/client';
+        export interface CyclicA extends CyclicB, PrismaClient {}
+      `,
+    );
+    createArchitectureProjectFile(
+      fixture,
+      'node_modules/cyclic-facade-b/package.json',
+      JSON.stringify({ name: 'cyclic-facade-b', types: 'index.d.ts' }),
+    );
+    createArchitectureProjectFile(
+      fixture,
+      'node_modules/cyclic-facade-b/index.d.ts',
+      `
+        import type { CyclicA } from 'cyclic-facade-a';
+        export interface CyclicB extends CyclicA {}
+      `,
+    );
+    createArchitectureProjectFile(
+      fixture,
+      'node_modules/nested-facade/package.json',
+      JSON.stringify({ name: 'nested-facade', types: 'index.d.ts' }),
+    );
+    createArchitectureProjectFile(
+      fixture,
+      'node_modules/nested-facade/index.d.ts',
+      `
+        import type { PrismaClient } from '@prisma/client';
+        export interface NestedFacade extends PrismaClient {}
+      `,
+    );
+    createArchitectureProjectFile(
+      fixture,
+      'node_modules/mixed-facade/package.json',
+      JSON.stringify({ name: 'mixed-facade', types: 'index.d.ts' }),
+    );
+    createArchitectureProjectFile(
+      fixture,
+      'node_modules/mixed-facade/index.d.ts',
+      `
+        import type { PrismaClient } from '@prisma/client';
+        export interface UnsafeFacade extends PrismaClient {}
+        export interface SafeFacade { readonly value: string; }
+      `,
+    );
+
+    try {
+      const violations = findArchitectureViolations(
+        fixture.sourceRoot,
+        fixture.modulesRoot,
+      );
+      expect(violations).toContain(
+        'modules/auth/application/facade-consumer.ts may not consume Prisma-origin symbol HiddenFacade outside approved infrastructure adapters',
+      );
+      expect(violations).not.toContain(
+        'modules/auth/application/facade-consumer.ts may not consume Prisma-origin symbol SafeExternalFacade outside approved infrastructure adapters',
+      );
+      expect(violations).toEqual(
+        expect.arrayContaining([
+          'modules/auth/application/facade-consumer.ts may not consume Prisma-origin symbol HiddenCyclicA outside approved infrastructure adapters',
+          'modules/auth/application/facade-consumer.ts may not consume Prisma-origin symbol HiddenCyclicB outside approved infrastructure adapters',
+        ]),
+      );
+    } finally {
+      removeArchitectureFixture(fixture);
+    }
+  });
+
+  it('does not project a use case dependency onto its API consumer', () => {
+    const fixture = createArchitectureFixture({
+      'modules/notifications/application/public.ts': `
+        export interface NotificationPort {
+          enqueue(): Promise<void>;
+        }
+      `,
+      'modules/auth/application/register-user.ts': `
+        import type { NotificationPort } from '../../notifications/application/public';
+
+        export class RegisterUser {
+          constructor(private readonly notifications: NotificationPort) {}
+
+          execute(): Promise<void> {
+            return this.notifications.enqueue();
+          }
+        }
+      `,
+      'modules/auth/api/auth.controller.ts': `
+        import { RegisterUser } from '../application/register-user';
+
+        export class AuthController {
+          constructor(private readonly registerUser: RegisterUser) {}
+        }
+      `,
+    });
+
+    try {
+      expect(
+        findArchitectureViolations(fixture.sourceRoot, fixture.modulesRoot),
+      ).toEqual([]);
+    } finally {
+      removeArchitectureFixture(fixture);
+    }
   });
 
   it('enforces module, persistence, and controller boundaries', () => {

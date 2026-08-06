@@ -75,6 +75,27 @@ function importTypeDependency(
   };
 }
 
+function transparentDeclarationNode(
+  declaration: ts.Declaration,
+): ts.Node | undefined {
+  if (ts.isTypeAliasDeclaration(declaration)) {
+    return declaration.type;
+  }
+  if (ts.isInterfaceDeclaration(declaration)) {
+    return declaration;
+  }
+  if (ts.isVariableDeclaration(declaration)) {
+    return declaration;
+  }
+  if (
+    ts.isPropertyDeclaration(declaration) ||
+    ts.isPropertySignature(declaration)
+  ) {
+    return declaration.type;
+  }
+  return undefined;
+}
+
 function terminalFilesForNode(
   node: ts.Node,
   resolver: OriginResolver,
@@ -153,8 +174,13 @@ function terminalFilesForSymbol(
         );
         continue;
       }
+      const transparentNode = transparentDeclarationNode(declaration);
+      if (transparentNode === undefined) {
+        terminalFiles.add(canonicalPath(sourceFile.fileName));
+        continue;
+      }
       const referencedFiles = terminalFilesForNode(
-        declaration,
+        transparentNode,
         resolver,
         context,
       );

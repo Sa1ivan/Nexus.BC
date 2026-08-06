@@ -111,12 +111,9 @@ export class PrismaWorkspaceRepository implements WorkspaceRepository {
         `SELECT "userId", "role"::text AS "role"
            FROM "Membership"
           WHERE "workspaceId" = $1::uuid
-            AND "userId" IN ($2::uuid, $3::uuid)
           ORDER BY "userId"
           FOR UPDATE`,
         input.workspaceId,
-        input.actorUserId,
-        input.targetUserId,
       );
       const actor = memberships.find(
         ({ userId }) => userId === input.actorUserId,
@@ -142,15 +139,7 @@ export class PrismaWorkspaceRepository implements WorkspaceRepository {
         return { kind: 'unchanged', membership };
       }
       if (target.role === 'OWNER' && input.role === 'EDITOR') {
-        const owners = await transaction.$queryRawUnsafe<MembershipRow[]>(
-          `SELECT "userId", "role"::text AS "role"
-             FROM "Membership"
-            WHERE "workspaceId" = $1::uuid AND "role" = 'OWNER'
-            ORDER BY "userId"
-            FOR UPDATE`,
-          input.workspaceId,
-        );
-        if (owners.length <= 1) {
+        if (memberships.filter(({ role }) => role === 'OWNER').length <= 1) {
           return { kind: 'last-owner' };
         }
       }

@@ -81,7 +81,7 @@ export class AuthController {
       this.rateLimiter,
       response,
       'register',
-      requestClientIp(request),
+      requestClientIp(request, this.configuration.nodeEnv),
       5,
     );
     return this.registerUser.execute(email, password);
@@ -99,7 +99,7 @@ export class AuthController {
       this.rateLimiter,
       response,
       'verify-email',
-      requestClientIp(request),
+      requestClientIp(request, this.configuration.nodeEnv),
       10,
     );
     const input = exactRequestBody(body, ['token']);
@@ -130,7 +130,7 @@ export class AuthController {
       this.rateLimiter,
       response,
       'login-ip',
-      requestClientIp(request),
+      requestClientIp(request, this.configuration.nodeEnv),
       20,
     );
     enforceHttpRateLimit(
@@ -171,7 +171,7 @@ export class AuthController {
       this.rateLimiter,
       response,
       'refresh',
-      requestClientIp(request),
+      requestClientIp(request, this.configuration.nodeEnv),
       30,
     );
     const current = readCookie(request, refreshCookieName);
@@ -213,7 +213,7 @@ export class AuthController {
       this.rateLimiter,
       response,
       'logout',
-      requestClientIp(request),
+      requestClientIp(request, this.configuration.nodeEnv),
       30,
     );
     await this.logoutUser.execute(readCookie(request, refreshCookieName));
@@ -248,7 +248,7 @@ export class AuthController {
       this.rateLimiter,
       response,
       'password-reset-request-ip',
-      requestClientIp(request),
+      requestClientIp(request, this.configuration.nodeEnv),
       10,
     );
     enforceHttpRateLimit(
@@ -285,7 +285,7 @@ export class AuthController {
       this.rateLimiter,
       response,
       'password-reset-confirm',
-      requestClientIp(request),
+      requestClientIp(request, this.configuration.nodeEnv),
       10,
     );
     const input = exactRequestBody(body, ['password', 'token']);
