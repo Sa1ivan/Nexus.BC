@@ -209,8 +209,114 @@ describe('module architecture', () => {
     }
   });
 
+  it('requires same-module API code to enter through the application layer', () => {
+    const fixture = createArchitectureFixture({
+      'modules/auth/domain/private-policy.ts': `
+        export const privatePolicy = true;
+      `,
+      'modules/auth/api/domain-consumer.ts': `
+        import { privatePolicy } from '../domain/private-policy';
+        export const leakedPolicy = privatePolicy;
+      `,
+    });
+
+    try {
+      expect(
+        findArchitectureViolations(fixture.sourceRoot, fixture.modulesRoot),
+      ).toContain(
+        'modules/auth/api/domain-consumer.ts may not depend on modules/auth/domain/private-policy.ts',
+      );
+    } finally {
+      removeArchitectureFixture(fixture);
+    }
+  });
+
   it('enforces module, persistence, and controller boundaries', () => {
     expect(findArchitectureViolations()).toEqual([]);
+  });
+
+  it('rejects cross-owner Prisma delegate writes from module infrastructure', () => {
+    const fixture = createArchitectureFixture({
+      'modules/auth/infrastructure/cross-owner.repository.ts': `
+        interface PrismaLike {
+          readonly workspace: {
+            delete(args: unknown): Promise<void>;
+          };
+        }
+
+        export function deleteForeignWorkspace(prisma: PrismaLike): Promise<void> {
+          return prisma.workspace.delete({ where: { id: 'workspace-1' } });
+        }
+      `,
+    });
+
+    try {
+      expect(
+        findArchitectureViolations(fixture.sourceRoot, fixture.modulesRoot),
+      ).toContain(
+        'modules/auth/infrastructure/cross-owner.repository.ts may not call Prisma write delegate workspace.delete; workspace belongs to workspaces',
+      );
+    } finally {
+      removeArchitectureFixture(fixture);
+    }
+  });
+
+  it('rejects a business-module dependency laundered through shared behavior', () => {
+    const fixture = createArchitectureFixture({
+      'modules/sites/infrastructure/private.repository.ts': `
+        export class PrivateSiteRepository {}
+      `,
+      'shared/site-facade.ts': `
+        import { PrivateSiteRepository } from '../modules/sites/infrastructure/private.repository';
+
+        export class SiteFacade {
+          constructor(readonly repository = new PrivateSiteRepository()) {}
+        }
+      `,
+      'modules/auth/application/shared-consumer.ts': `
+        import { SiteFacade } from '../../../shared/site-facade';
+        export const leakedSiteFacade = new SiteFacade();
+      `,
+    });
+
+    try {
+      expect(
+        findArchitectureViolations(fixture.sourceRoot, fixture.modulesRoot),
+      ).toContain(
+        'shared/site-facade.ts crosses into modules/sites/infrastructure/private.repository.ts; shared code may not depend on business modules',
+      );
+    } finally {
+      removeArchitectureFixture(fixture);
+    }
+  });
+
+  it('tracks literal and non-literal createRequire dependencies', () => {
+    const fixture = createArchitectureFixture({
+      'modules/sites/infrastructure/private.repository.ts': `
+        export class PrivateSiteRepository {}
+      `,
+      'modules/auth/application/create-require-consumer.ts': `
+        import { createRequire } from 'node:module';
+
+        const load = createRequire(import.meta.url);
+        load('../../sites/infrastructure/private.repository');
+        const dynamicTarget = '../../sites/infrastructure/private.repository';
+        load(dynamicTarget);
+      `,
+    });
+
+    try {
+      expect(
+        findArchitectureViolations(fixture.sourceRoot, fixture.modulesRoot),
+      ).toEqual(
+        expect.arrayContaining([
+          'modules/auth/application/create-require-consumer.ts crosses into modules/sites/infrastructure/private.repository.ts; cross-module imports must target application/public.ts',
+          'modules/auth/application/create-require-consumer.ts has a non-literal require() dependency; architecture dependencies must use string literals',
+        ]),
+      );
+    } finally {
+      removeArchitectureFixture(fixture);
+    }
   });
 
   it('blocks every P1-01 architecture bypass while retaining safe controls', () => {

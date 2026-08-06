@@ -34,6 +34,7 @@ import {
   restrictedOriginsForSpecifier,
   restrictedOriginLabel,
 } from './restricted-origin';
+import { collectPrismaDelegateWrites } from './prisma-delegate-ownership';
 
 function addRestrictedBindingViolations(
   bindings: readonly RestrictedBinding[],
@@ -190,6 +191,26 @@ export function findArchitectureViolations(
       violations,
     );
 
+    if (mayUsePrisma(sourceFilePath, projectSourceRoot, projectModulesRoot)) {
+      const prismaOwner =
+        sourceLocation?.layer === 'infrastructure'
+          ? sourceLocation.moduleName
+          : relativeSourcePath.startsWith('shared/audit/')
+            ? 'shared/audit'
+            : relativeSourcePath.startsWith('shared/idempotency/')
+              ? 'shared/idempotency'
+              : undefined;
+      if (prismaOwner !== undefined) {
+        for (const write of collectPrismaDelegateWrites(sourceFile)) {
+          if (write.owner !== prismaOwner) {
+            violations.push(
+              `${relativeSourcePath} may not call Prisma write delegate ${write.delegate}.${write.operation}; ${write.delegate} belongs to ${write.owner}`,
+            );
+          }
+        }
+      }
+    }
+
     for (const dependency of importDependencies) {
       const { specifier } = dependency;
       const resolvedImport = resolveImport(
@@ -238,6 +259,15 @@ export function findArchitectureViolations(
       }
 
       if (sourceLocation === undefined) {
+        if (
+          relativeSourcePath.startsWith('shared/') &&
+          resolvedImport !== undefined &&
+          directTargetLocation !== undefined
+        ) {
+          violations.push(
+            `${relativeSourcePath} crosses into ${toSourceRelativePath(resolvedImport, projectSourceRoot)}; shared code may not depend on business modules`,
+          );
+        }
         continue;
       }
 

@@ -27,7 +27,7 @@ export const requiredModules = [
 export const allowedSameModuleDependencies: Readonly<
   Record<ModuleLayer, ReadonlySet<ModuleLayer>>
 > = {
-  api: new Set(['api', 'application', 'domain']),
+  api: new Set(['api', 'application']),
   application: new Set(['application', 'domain']),
   domain: new Set(['domain']),
   infrastructure: new Set(['infrastructure', 'application', 'domain']),

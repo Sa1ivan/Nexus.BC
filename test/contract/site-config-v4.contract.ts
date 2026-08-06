@@ -9,6 +9,43 @@ import {
 } from '../../src/modules/sites/domain/site-config-v4';
 
 const contractRoot = join(process.cwd(), 'contracts/site-config');
+const mirroredManifestSha256 =
+  '5555fca3001240dbc982f1608f8c365985e4052752fffffcffae9bfc0a167477';
+const requiredFixtureNames = [
+  'future-version-rejected.json',
+  'legacy-v1-import.json',
+  'legacy-v2-import.json',
+  'legacy-v3-import.json',
+  'v4-blocks-at-limit.json',
+  'v4-blocks-over-limit.json',
+  'v4-bundled-dot-images-valid.json',
+  'v4-bundled-images-valid.json',
+  'v4-bundled-traversal-rejected.json',
+  'v4-collection-at-limit.json',
+  'v4-collection-over-limit.json',
+  'v4-data-url-rejected.json',
+  'v4-depth-at-limit.json',
+  'v4-depth-over-limit.json',
+  'v4-document-at-limit.json',
+  'v4-document-over-limit.json',
+  'v4-duplicate-identifiers.json',
+  'v4-envelope-at-limit.json',
+  'v4-envelope-over-limit.json',
+  'v4-form-fields-at-limit.json',
+  'v4-form-fields-over-limit.json',
+  'v4-full-valid.json',
+  'v4-minimal-valid.json',
+  'v4-pages-at-limit.json',
+  'v4-pages-over-limit.json',
+  'v4-shared-chrome-valid.json',
+  'v4-string-at-limit.json',
+  'v4-string-over-limit.json',
+  'v4-unsafe-link.json',
+  'v5-bundled-traversal.json',
+  'v5-external-unsafe.json',
+  'v5-managed-missing-asset-id.json',
+  'v5-managed-valid.json',
+] as const;
 
 function fixture(name: string): string {
   return readFileSync(join(contractRoot, 'fixtures', name), 'utf8');
@@ -18,12 +55,25 @@ function validConfig(): Record<string, unknown> {
   return JSON.parse(fixture('valid-v4.json')) as Record<string, unknown>;
 }
 
+function firstLeadField(
+  config: Record<string, unknown>,
+): Record<string, unknown> {
+  const pages = config['pages'] as Record<string, unknown>[];
+  const blocks = pages[0]!['blocks'] as Record<string, unknown>[];
+  const leadForm = blocks.find((block) => block['type'] === 'leadForm');
+  const fields = leadForm?.['fields'] as Record<string, unknown>[] | undefined;
+  if (fields?.[0] === undefined)
+    throw new Error('Lead-form fixture is missing');
+  return fields[0];
+}
+
 describe('SiteConfig v4 cloud contract', () => {
   it('keeps every frozen artifact covered by the SHA-256 manifest', () => {
-    const manifest = readFileSync(
-      join(contractRoot, 'manifest.sha256'),
-      'utf8',
-    ).trim();
+    const manifestBytes = readFileSync(join(contractRoot, 'manifest.sha256'));
+    expect(createHash('sha256').update(manifestBytes).digest('hex')).toBe(
+      mirroredManifestSha256,
+    );
+    const manifest = manifestBytes.toString('utf8').trim();
     const manifestPaths = manifest.split('\n').map((line) => line.slice(66));
     const actualPaths = [
       'v4.schema.json',
@@ -34,6 +84,11 @@ describe('SiteConfig v4 cloud contract', () => {
 
     expect([...new Set(manifestPaths)].sort()).toEqual(actualPaths);
     expect(manifestPaths).toHaveLength(actualPaths.length);
+    expect(actualPaths).toEqual(
+      expect.arrayContaining(
+        requiredFixtureNames.map((name) => `fixtures/${name}`),
+      ),
+    );
 
     for (const line of manifest.split('\n')) {
       const match = /^(?<hash>[a-f\d]{64}) {2}(?<path>.+)$/u.exec(line);
@@ -44,6 +99,62 @@ describe('SiteConfig v4 cloud contract', () => {
         match!.groups!['hash'],
       );
     }
+  });
+
+  it.each([
+    'v4-minimal-valid.json',
+    'v4-full-valid.json',
+    'v4-shared-chrome-valid.json',
+    'v4-bundled-images-valid.json',
+    'v4-bundled-dot-images-valid.json',
+    'v4-pages-at-limit.json',
+    'v4-blocks-at-limit.json',
+    'v4-collection-at-limit.json',
+    'v4-form-fields-at-limit.json',
+    'v4-string-at-limit.json',
+    'v4-envelope-at-limit.json',
+    'v4-document-at-limit.json',
+  ])('accepts the exact boundary fixture %s', (name) => {
+    expect(
+      validateAndCanonicalizeSiteConfigV4Json(fixture(name)),
+    ).toMatchObject({
+      ok: true,
+    });
+  });
+
+  it.each([
+    ['v4-bundled-traversal-rejected.json', 'invalid-site-config'],
+    ['v4-data-url-rejected.json', 'invalid-site-config'],
+    ['v4-envelope-over-limit.json', 'json-envelope-too-large'],
+    ['v4-document-over-limit.json', 'canonical-document-too-large'],
+    ['v4-pages-over-limit.json', 'invalid-site-config'],
+    ['v4-blocks-over-limit.json', 'invalid-site-config'],
+    ['v4-collection-over-limit.json', 'invalid-site-config'],
+    ['v4-form-fields-over-limit.json', 'invalid-site-config'],
+    ['v4-depth-over-limit.json', 'json-depth-exceeded'],
+    ['v4-duplicate-identifiers.json', 'invalid-site-config'],
+    ['v4-string-over-limit.json', 'invalid-site-config'],
+    ['v4-unsafe-link.json', 'invalid-site-config'],
+    ['future-version-rejected.json', 'unsupported-schema'],
+  ] as const)('rejects the exact boundary fixture %s with %s', (name, code) => {
+    expect(validateAndCanonicalizeSiteConfigV4Json(fixture(name))).toEqual({
+      ok: false,
+      code,
+    });
+  });
+
+  it('keeps bundled path spellings canonically equivalent', () => {
+    const direct = validateAndCanonicalizeSiteConfigV4Json(
+      fixture('v4-bundled-images-valid.json'),
+    );
+    const dotted = validateAndCanonicalizeSiteConfigV4Json(
+      fixture('v4-bundled-dot-images-valid.json'),
+    );
+
+    expect(direct.ok).toBe(true);
+    expect(dotted.ok).toBe(true);
+    if (direct.ok && dotted.ok)
+      expect(dotted.canonicalJson).toBe(direct.canonicalJson);
   });
 
   it('bounds every schema array and explicit string while excluding chrome from page blocks', () => {
@@ -147,6 +258,23 @@ describe('SiteConfig v4 cloud contract', () => {
         SITE_CONFIG_V4_CANONICAL_BYTES_LIMIT,
       );
     }
+  });
+
+  it('accepts empty lead placeholders and long help text at the exact boundary', () => {
+    const accepted = validConfig();
+    const acceptedField = firstLeadField(accepted);
+    acceptedField['placeholder'] = '';
+    acceptedField['helpText'] = 'h'.repeat(10_000);
+
+    const rejected = structuredClone(accepted);
+    firstLeadField(rejected)['helpText'] = 'h'.repeat(10_001);
+
+    expect(
+      validateAndCanonicalizeSiteConfigV4Json(JSON.stringify(accepted)),
+    ).toMatchObject({ ok: true });
+    expect(
+      validateAndCanonicalizeSiteConfigV4Json(JSON.stringify(rejected)),
+    ).toMatchObject({ ok: false, code: 'invalid-site-config' });
   });
 
   it.each([
@@ -291,6 +419,21 @@ describe('SiteConfig v4 cloud contract', () => {
     ).toMatchObject({
       ok: true,
     });
+  });
+
+  it('measures URL limits in Unicode code points like JSON Schema', () => {
+    const config = validConfig();
+    const prefix = 'https://example.com/';
+    const source = `${prefix}${'😀'.repeat(2_048 - [...prefix].length)}`;
+    const page = (config['pages'] as Record<string, unknown>[])[0]!;
+    const hero = (page['blocks'] as Record<string, unknown>[])[0]!;
+    (hero['media'] as Record<string, unknown>)['src'] = source;
+
+    expect(source.length).toBeGreaterThan(2_048);
+    expect([...source]).toHaveLength(2_048);
+    expect(
+      validateAndCanonicalizeSiteConfigV4Json(JSON.stringify(config)),
+    ).toMatchObject({ ok: true });
   });
 
   it.each([

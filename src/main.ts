@@ -7,7 +7,8 @@ interface PortConfiguration {
 }
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create(AppModule, { bodyParser: false });
+  app.enableShutdownHooks();
   const configuration = app.get<PortConfiguration>(APP_CONFIG);
   await app.listen(configuration.port);
 }

@@ -26,7 +26,7 @@
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "node --require argon2 --experimental-vm-modules node_modules/jest/bin/jest.js --config ./test/jest-e2e.json --runInBand",
     "prisma:generate": "prisma generate",
-    "preverify": "npm run prisma:generate",
+    "preverify": "node scripts/check-node-version.mjs && npm run prisma:generate",
     "verify": "npm run lint && npm run architecture && npm run test:contract && npm run test && npm run test:e2e && npm run build && npm run format:check"
   },
   "dependencies": {

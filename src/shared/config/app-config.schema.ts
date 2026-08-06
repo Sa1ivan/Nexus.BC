@@ -37,6 +37,9 @@ export interface AppConfig {
 export const APP_CONFIG = 'APP_CONFIG';
 
 const productionWebOrigin = 'https://app.nexus.site';
+const exampleTokenSecret = 'replace-with-at-least-32-random-characters';
+const exampleOutboxEncryptionKey = Buffer.alloc(32, 1);
+const exampleIdempotencyHmacKey = Buffer.alloc(32, 2);
 
 const testDefaults = {
   DATABASE_URL: 'postgresql://postgres@127.0.0.1:5432/nexus_test',
@@ -100,6 +103,9 @@ function requiredSecret(
   const value = requiredValue(environment, key, nodeEnvironment);
   if (value.length < 32) {
     throw configurationError(key, 'must contain at least 32 characters');
+  }
+  if (nodeEnvironment === 'production' && value === exampleTokenSecret) {
+    throw configurationError(key, 'must not use the public example value');
   }
   return value;
 }
@@ -312,6 +318,32 @@ export function loadAppConfig() {
       'must select a keyring entry',
     );
   }
+  if (
+    nodeEnv === 'production' &&
+    [...idempotencyHmacKeyring.values()].some((key) =>
+      key.equals(exampleIdempotencyHmacKey),
+    )
+  ) {
+    throw configurationError(
+      'IDEMPOTENCY_HMAC_KEYRING',
+      'must not contain the public example key',
+    );
+  }
+  const outboxEncryptionKey = parseBase64Key(
+    'OUTBOX_ENCRYPTION_KEY',
+    requiredValue(environment, 'OUTBOX_ENCRYPTION_KEY', nodeEnv),
+    32,
+    true,
+  );
+  if (
+    nodeEnv === 'production' &&
+    outboxEncryptionKey.equals(exampleOutboxEncryptionKey)
+  ) {
+    throw configurationError(
+      'OUTBOX_ENCRYPTION_KEY',
+      'must not use the public example key',
+    );
+  }
 
   return {
     nodeEnv,
@@ -368,12 +400,7 @@ export function loadAppConfig() {
       ),
     },
     emailFrom: requiredValue(environment, 'EMAIL_FROM', nodeEnv),
-    outboxEncryptionKey: parseBase64Key(
-      'OUTBOX_ENCRYPTION_KEY',
-      requiredValue(environment, 'OUTBOX_ENCRYPTION_KEY', nodeEnv),
-      32,
-      true,
-    ),
+    outboxEncryptionKey,
     idempotencyHmacActiveKeyVersion: activeKeyVersion,
     idempotencyHmacKeyring,
     siteConfigRolloutMode: parseRolloutMode(

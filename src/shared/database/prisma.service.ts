@@ -5,12 +5,14 @@ import {
   type OnModuleInit,
 } from '@nestjs/common';
 import { PrismaPg } from '@prisma/adapter-pg';
+import { Pool } from 'pg';
 import { PrismaClient } from '../../generated/prisma/client';
 import { APP_CONFIG, type AppConfig } from '../config/app-config.schema';
 import {
-  checkDatabaseReadiness,
+  DatabaseReadinessCoordinator,
   type DatabaseReadiness,
 } from './database-readiness';
+import { probeDatabaseConnection } from './cancellable-database-probe';
 
 export const PrismaClientService = Symbol('PrismaClientService');
 
@@ -23,6 +25,9 @@ class PrismaService
   extends PrismaClient
   implements OnModuleInit, OnModuleDestroy, DatabaseReadiness
 {
+  private readonly readiness: DatabaseReadinessCoordinator;
+  private readonly readinessPool: Pool;
+
   constructor(@Inject(APP_CONFIG) configuration: AppConfig) {
     super({
       adapter: new PrismaPg({
@@ -30,6 +35,17 @@ class PrismaService
         connectionTimeoutMillis: 500,
       }),
     });
+    this.readinessPool = new Pool({
+      connectionString: configuration.databaseUrl,
+      connectionTimeoutMillis: 500,
+      max: 1,
+      idleTimeoutMillis: 1_000,
+      allowExitOnIdle: true,
+      application_name: 'nexus-readiness',
+    });
+    this.readiness = new DatabaseReadinessCoordinator((signal) =>
+      probeDatabaseConnection(this.readinessPool, signal),
+    );
   }
 
   async onModuleInit(): Promise<void> {
@@ -41,11 +57,11 @@ class PrismaService
   }
 
   async onModuleDestroy(): Promise<void> {
-    await this.$disconnect();
+    await Promise.all([this.$disconnect(), this.readinessPool.end()]);
   }
 
   async isReady(): Promise<boolean> {
-    return checkDatabaseReadiness(() => this.$queryRaw`SELECT 1`);
+    return this.readiness.isReady();
   }
 }
 

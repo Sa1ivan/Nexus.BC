@@ -1,0 +1,167 @@
+{
+  "id": "site-contract",
+  "schemaVersion": 4,
+  "name": "Contract fixture",
+  "theme": {
+    "pageBackground": "#ffffff",
+    "surfaceColor": "#f5f7fb",
+    "textColor": "#111827",
+    "mutedTextColor": "#5f6b7a",
+    "accentColor": "#0a7f72",
+    "fontPairing": "grotesk",
+    "typeScale": "balanced",
+    "contentWidth": "wide",
+    "sectionSpacing": "balanced",
+    "buttonShape": "rounded",
+    "radius": 8
+  },
+  "business": {
+    "brandName": "Nexus Studio",
+    "logo": null,
+    "phone": "+7 999 000-00-00",
+    "email": "hello@nexus.app",
+    "address": "",
+    "hours": "",
+    "messengers": [],
+    "socialLinks": []
+  },
+  "seo": {
+    "language": "ru",
+    "favicon": null
+  },
+  "chrome": {
+    "header": {
+      "id": "header-main",
+      "anchor": "header",
+      "type": "siteHeader",
+      "appearance": {},
+      "hidden": false,
+      "design": {
+        "accentColor": "teal",
+        "fontPairing": "grotesk",
+        "density": "balanced",
+        "templateStyle": "classic"
+      },
+      "inheritBusiness": true,
+      "variant": "stretchedNav",
+      "brandName": "Nexus Studio",
+      "navigationItems": [
+        {
+          "id": "nav-home",
+          "label": "Главная",
+          "target": "#hero",
+          "kind": "anchor",
+          "openInNewTab": false
+        }
+      ],
+      "cta": {
+        "id": "header-cta",
+        "label": "Связаться",
+        "target": "#lead-form",
+        "kind": "anchor",
+        "openInNewTab": false
+      }
+    },
+    "footer": {
+      "id": "footer-main",
+      "anchor": "contact",
+      "type": "siteFooter",
+      "appearance": {},
+      "hidden": false,
+      "design": {
+        "accentColor": "teal",
+        "fontPairing": "grotesk",
+        "density": "balanced",
+        "templateStyle": "classic"
+      },
+      "inheritBusiness": true,
+      "variant": "bookingFooter",
+      "brandName": "Nexus Studio",
+      "cta": {
+        "id": "footer-cta",
+        "label": "Оставить заявку",
+        "target": "#lead-form",
+        "kind": "anchor",
+        "openInNewTab": false
+      },
+      "contactLines": [
+        "hello@nexus.app"
+      ],
+      "links": []
+    }
+  },
+  "pages": [
+    {
+      "id": "page-home",
+      "slug": "home",
+      "title": "Главная",
+      "seo": {
+        "title": "Nexus Studio",
+        "description": "Contract fixture",
+        "socialImage": null,
+        "noIndex": false
+      },
+      "blocks": [
+        {
+          "id": "hero-home",
+          "anchor": "hero",
+          "type": "hero",
+          "appearance": {},
+          "hidden": false,
+          "design": {
+            "accentColor": "teal",
+            "fontPairing": "grotesk",
+            "density": "balanced",
+            "templateStyle": "classic"
+          },
+          "title": "Соберите сайт быстрее",
+          "subtitle": "Contract subtitle",
+          "buttonText": "Начать",
+          "buttonHref": "#lead-form",
+          "media": {
+            "src": "images/../secrets.txt",
+            "alt": "Рабочая зона",
+            "focalPoint": {
+              "x": 50,
+              "y": 50
+            }
+          },
+          "styles": {
+            "backgroundColor": "#f5f7fb",
+            "textColor": "#111827",
+            "minHeight": "520px",
+            "alignment": "center"
+          }
+        },
+        {
+          "id": "lead-form-home",
+          "anchor": "lead-form",
+          "type": "leadForm",
+          "appearance": {},
+          "hidden": false,
+          "design": {
+            "accentColor": "teal",
+            "fontPairing": "grotesk",
+            "density": "balanced",
+            "templateStyle": "classic"
+          },
+          "title": "Оставьте заявку",
+          "description": "Расскажите о задаче",
+          "submitText": "Отправить",
+          "successMessage": "Заявка сохранена",
+          "fields": [
+            {
+              "id": "name",
+              "label": "Имя",
+              "type": "text",
+              "placeholder": "Ваше имя",
+              "required": true,
+              "helpText": "",
+              "order": 1
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

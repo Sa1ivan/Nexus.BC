@@ -1,0 +1,707 @@
+{
+  "id": "site-contract",
+  "schemaVersion": 4,
+  "name": "M",
+  "theme": {
+    "pageBackground": "#ffffff",
+    "surfaceColor": "#f5f7fb",
+    "textColor": "#111827",
+    "mutedTextColor": "#5f6b7a",
+    "accentColor": "#0a7f72",
+    "fontPairing": "grotesk",
+    "typeScale": "balanced",
+    "contentWidth": "wide",
+    "sectionSpacing": "balanced",
+    "buttonShape": "rounded",
+    "radius": 8
+  },
+  "business": {
+    "brandName": "Nexus Studio",
+    "logo": null,
+    "phone": "+7 999 000-00-00",
+    "email": "hello@nexus.app",
+    "address": "",
+    "hours": "",
+    "messengers": [],
+    "socialLinks": []
+  },
+  "seo": {
+    "language": "ru",
+    "favicon": null
+  },
+  "chrome": {
+    "header": {
+      "id": "header-main",
+      "anchor": "header",
+      "type": "siteHeader",
+      "appearance": {},
+      "hidden": false,
+      "design": {
+        "accentColor": "teal",
+        "fontPairing": "grotesk",
+        "density": "balanced",
+        "templateStyle": "classic"
+      },
+      "inheritBusiness": true,
+      "variant": "stretchedNav",
+      "brandName": "Nexus Studio",
+      "navigationItems": [
+        {
+          "id": "nav-home",
+          "label": "Главная",
+          "target": "#hero",
+          "kind": "anchor",
+          "openInNewTab": false
+        }
+      ],
+      "cta": {
+        "id": "header-cta",
+        "label": "Связаться",
+        "target": "#lead-form",
+        "kind": "anchor",
+        "openInNewTab": false
+      }
+    },
+    "footer": {
+      "id": "footer-main",
+      "anchor": "contact",
+      "type": "siteFooter",
+      "appearance": {},
+      "hidden": false,
+      "design": {
+        "accentColor": "teal",
+        "fontPairing": "grotesk",
+        "density": "balanced",
+        "templateStyle": "classic"
+      },
+      "inheritBusiness": true,
+      "variant": "bookingFooter",
+      "brandName": "Nexus Studio",
+      "cta": {
+        "id": "footer-cta",
+        "label": "Оставить заявку",
+        "target": "#lead-form",
+        "kind": "anchor",
+        "openInNewTab": false
+      },
+      "contactLines": [
+        "hello@nexus.app"
+      ],
+      "links": []
+    }
+  },
+  "pages": [
+    {
+      "id": "page-1",
+      "slug": "page-1",
+      "title": "Page 1",
+      "seo": {
+        "title": "Page 1",
+        "description": "",
+        "socialImage": null,
+        "noIndex": false
+      },
+      "blocks": []
+    },
+    {
+      "id": "page-2",
+      "slug": "page-2",
+      "title": "Page 2",
+      "seo": {
+        "title": "Page 2",
+        "description": "",
+        "socialImage": null,
+        "noIndex": false
+      },
+      "blocks": []
+    },
+    {
+      "id": "page-3",
+      "slug": "page-3",
+      "title": "Page 3",
+      "seo": {
+        "title": "Page 3",
+        "description": "",
+        "socialImage": null,
+        "noIndex": false
+      },
+      "blocks": []
+    },
+    {
+      "id": "page-4",
+      "slug": "page-4",
+      "title": "Page 4",
+      "seo": {
+        "title": "Page 4",
+        "description": "",
+        "socialImage": null,
+        "noIndex": false
+      },
+      "blocks": []
+    },
+    {
+      "id": "page-5",
+      "slug": "page-5",
+      "title": "Page 5",
+      "seo": {
+        "title": "Page 5",
+        "description": "",
+        "socialImage": null,
+        "noIndex": false
+      },
+      "blocks": []
+    },
+    {
+      "id": "page-6",
+      "slug": "page-6",
+      "title": "Page 6",
+      "seo": {
+        "title": "Page 6",
+        "description": "",
+        "socialImage": null,
+        "noIndex": false
+      },
+      "blocks": []
+    },
+    {
+      "id": "page-7",
+      "slug": "page-7",
+      "title": "Page 7",
+      "seo": {
+        "title": "Page 7",
+        "description": "",
+        "socialImage": null,
+        "noIndex": false
+      },
+      "blocks": []
+    },
+    {
+      "id": "page-8",
+      "slug": "page-8",
+      "title": "Page 8",
+      "seo": {
+        "title": "Page 8",
+        "description": "",
+        "socialImage": null,
+        "noIndex": false
+      },
+      "blocks": []
+    },
+    {
+      "id": "page-9",
+      "slug": "page-9",
+      "title": "Page 9",
+      "seo": {
+        "title": "Page 9",
+        "description": "",
+        "socialImage": null,
+        "noIndex": false
+      },
+      "blocks": []
+    },
+    {
+      "id": "page-10",
+      "slug": "page-10",
+      "title": "Page 10",
+      "seo": {
+        "title": "Page 10",
+        "description": "",
+        "socialImage": null,
+        "noIndex": false
+      },
+      "blocks": []
+    },
+    {
+      "id": "page-11",
+      "slug": "page-11",
+      "title": "Page 11",
+      "seo": {
+        "title": "Page 11",
+        "description": "",
+        "socialImage": null,
+        "noIndex": false
+      },
+      "blocks": []
+    },
+    {
+      "id": "page-12",
+      "slug": "page-12",
+      "title": "Page 12",
+      "seo": {
+        "title": "Page 12",
+        "description": "",
+        "socialImage": null,
+        "noIndex": false
+      },
+      "blocks": []
+    },
+    {
+      "id": "page-13",
+      "slug": "page-13",
+      "title": "Page 13",
+      "seo": {
+        "title": "Page 13",
+        "description": "",
+        "socialImage": null,
+        "noIndex": false
+      },
+      "blocks": []
+    },
+    {
+      "id": "page-14",
+      "slug": "page-14",
+      "title": "Page 14",
+      "seo": {
+        "title": "Page 14",
+        "description": "",
+        "socialImage": null,
+        "noIndex": false
+      },
+      "blocks": []
+    },
+    {
+      "id": "page-15",
+      "slug": "page-15",
+      "title": "Page 15",
+      "seo": {
+        "title": "Page 15",
+        "description": "",
+        "socialImage": null,
+        "noIndex": false
+      },
+      "blocks": []
+    },
+    {
+      "id": "page-16",
+      "slug": "page-16",
+      "title": "Page 16",
+      "seo": {
+        "title": "Page 16",
+        "description": "",
+        "socialImage": null,
+        "noIndex": false
+      },
+      "blocks": []
+    },
+    {
+      "id": "page-17",
+      "slug": "page-17",
+      "title": "Page 17",
+      "seo": {
+        "title": "Page 17",
+        "description": "",
+        "socialImage": null,
+        "noIndex": false
+      },
+      "blocks": []
+    },
+    {
+      "id": "page-18",
+      "slug": "page-18",
+      "title": "Page 18",
+      "seo": {
+        "title": "Page 18",
+        "description": "",
+        "socialImage": null,
+        "noIndex": false
+      },
+      "blocks": []
+    },
+    {
+      "id": "page-19",
+      "slug": "page-19",
+      "title": "Page 19",
+      "seo": {
+        "title": "Page 19",
+        "description": "",
+        "socialImage": null,
+        "noIndex": false
+      },
+      "blocks": []
+    },
+    {
+      "id": "page-20",
+      "slug": "page-20",
+      "title": "Page 20",
+      "seo": {
+        "title": "Page 20",
+        "description": "",
+        "socialImage": null,
+        "noIndex": false
+      },
+      "blocks": []
+    },
+    {
+      "id": "page-21",
+      "slug": "page-21",
+      "title": "Page 21",
+      "seo": {
+        "title": "Page 21",
+        "description": "",
+        "socialImage": null,
+        "noIndex": false
+      },
+      "blocks": []
+    },
+    {
+      "id": "page-22",
+      "slug": "page-22",
+      "title": "Page 22",
+      "seo": {
+        "title": "Page 22",
+        "description": "",
+        "socialImage": null,
+        "noIndex": false
+      },
+      "blocks": []
+    },
+    {
+      "id": "page-23",
+      "slug": "page-23",
+      "title": "Page 23",
+      "seo": {
+        "title": "Page 23",
+        "description": "",
+        "socialImage": null,
+        "noIndex": false
+      },
+      "blocks": []
+    },
+    {
+      "id": "page-24",
+      "slug": "page-24",
+      "title": "Page 24",
+      "seo": {
+        "title": "Page 24",
+        "description": "",
+        "socialImage": null,
+        "noIndex": false
+      },
+      "blocks": []
+    },
+    {
+      "id": "page-25",
+      "slug": "page-25",
+      "title": "Page 25",
+      "seo": {
+        "title": "Page 25",
+        "description": "",
+        "socialImage": null,
+        "noIndex": false
+      },
+      "blocks": []
+    },
+    {
+      "id": "page-26",
+      "slug": "page-26",
+      "title": "Page 26",
+      "seo": {
+        "title": "Page 26",
+        "description": "",
+        "socialImage": null,
+        "noIndex": false
+      },
+      "blocks": []
+    },
+    {
+      "id": "page-27",
+      "slug": "page-27",
+      "title": "Page 27",
+      "seo": {
+        "title": "Page 27",
+        "description": "",
+        "socialImage": null,
+        "noIndex": false
+      },
+      "blocks": []
+    },
+    {
+      "id": "page-28",
+      "slug": "page-28",
+      "title": "Page 28",
+      "seo": {
+        "title": "Page 28",
+        "description": "",
+        "socialImage": null,
+        "noIndex": false
+      },
+      "blocks": []
+    },
+    {
+      "id": "page-29",
+      "slug": "page-29",
+      "title": "Page 29",
+      "seo": {
+        "title": "Page 29",
+        "description": "",
+        "socialImage": null,
+        "noIndex": false
+      },
+      "blocks": []
+    },
+    {
+      "id": "page-30",
+      "slug": "page-30",
+      "title": "Page 30",
+      "seo": {
+        "title": "Page 30",
+        "description": "",
+        "socialImage": null,
+        "noIndex": false
+      },
+      "blocks": []
+    },
+    {
+      "id": "page-31",
+      "slug": "page-31",
+      "title": "Page 31",
+      "seo": {
+        "title": "Page 31",
+        "description": "",
+        "socialImage": null,
+        "noIndex": false
+      },
+      "blocks": []
+    },
+    {
+      "id": "page-32",
+      "slug": "page-32",
+      "title": "Page 32",
+      "seo": {
+        "title": "Page 32",
+        "description": "",
+        "socialImage": null,
+        "noIndex": false
+      },
+      "blocks": []
+    },
+    {
+      "id": "page-33",
+      "slug": "page-33",
+      "title": "Page 33",
+      "seo": {
+        "title": "Page 33",
+        "description": "",
+        "socialImage": null,
+        "noIndex": false
+      },
+      "blocks": []
+    },
+    {
+      "id": "page-34",
+      "slug": "page-34",
+      "title": "Page 34",
+      "seo": {
+        "title": "Page 34",
+        "description": "",
+        "socialImage": null,
+        "noIndex": false
+      },
+      "blocks": []
+    },
+    {
+      "id": "page-35",
+      "slug": "page-35",
+      "title": "Page 35",
+      "seo": {
+        "title": "Page 35",
+        "description": "",
+        "socialImage": null,
+        "noIndex": false
+      },
+      "blocks": []
+    },
+    {
+      "id": "page-36",
+      "slug": "page-36",
+      "title": "Page 36",
+      "seo": {
+        "title": "Page 36",
+        "description": "",
+        "socialImage": null,
+        "noIndex": false
+      },
+      "blocks": []
+    },
+    {
+      "id": "page-37",
+      "slug": "page-37",
+      "title": "Page 37",
+      "seo": {
+        "title": "Page 37",
+        "description": "",
+        "socialImage": null,
+        "noIndex": false
+      },
+      "blocks": []
+    },
+    {
+      "id": "page-38",
+      "slug": "page-38",
+      "title": "Page 38",
+      "seo": {
+        "title": "Page 38",
+        "description": "",
+        "socialImage": null,
+        "noIndex": false
+      },
+      "blocks": []
+    },
+    {
+      "id": "page-39",
+      "slug": "page-39",
+      "title": "Page 39",
+      "seo": {
+        "title": "Page 39",
+        "description": "",
+        "socialImage": null,
+        "noIndex": false
+      },
+      "blocks": []
+    },
+    {
+      "id": "page-40",
+      "slug": "page-40",
+      "title": "Page 40",
+      "seo": {
+        "title": "Page 40",
+        "description": "",
+        "socialImage": null,
+        "noIndex": false
+      },
+      "blocks": []
+    },
+    {
+      "id": "page-41",
+      "slug": "page-41",
+      "title": "Page 41",
+      "seo": {
+        "title": "Page 41",
+        "description": "",
+        "socialImage": null,
+        "noIndex": false
+      },
+      "blocks": []
+    },
+    {
+      "id": "page-42",
+      "slug": "page-42",
+      "title": "Page 42",
+      "seo": {
+        "title": "Page 42",
+        "description": "",
+        "socialImage": null,
+        "noIndex": false
+      },
+      "blocks": []
+    },
+    {
+      "id": "page-43",
+      "slug": "page-43",
+      "title": "Page 43",
+      "seo": {
+        "title": "Page 43",
+        "description": "",
+        "socialImage": null,
+        "noIndex": false
+      },
+      "blocks": []
+    },
+    {
+      "id": "page-44",
+      "slug": "page-44",
+      "title": "Page 44",
+      "seo": {
+        "title": "Page 44",
+        "description": "",
+        "socialImage": null,
+        "noIndex": false
+      },
+      "blocks": []
+    },
+    {
+      "id": "page-45",
+      "slug": "page-45",
+      "title": "Page 45",
+      "seo": {
+        "title": "Page 45",
+        "description": "",
+        "socialImage": null,
+        "noIndex": false
+      },
+      "blocks": []
+    },
+    {
+      "id": "page-46",
+      "slug": "page-46",
+      "title": "Page 46",
+      "seo": {
+        "title": "Page 46",
+        "description": "",
+        "socialImage": null,
+        "noIndex": false
+      },
+      "blocks": []
+    },
+    {
+      "id": "page-47",
+      "slug": "page-47",
+      "title": "Page 47",
+      "seo": {
+        "title": "Page 47",
+        "description": "",
+        "socialImage": null,
+        "noIndex": false
+      },
+      "blocks": []
+    },
+    {
+      "id": "page-48",
+      "slug": "page-48",
+      "title": "Page 48",
+      "seo": {
+        "title": "Page 48",
+        "description": "",
+        "socialImage": null,
+        "noIndex": false
+      },
+      "blocks": []
+    },
+    {
+      "id": "page-49",
+      "slug": "page-49",
+      "title": "Page 49",
+      "seo": {
+        "title": "Page 49",
+        "description": "",
+        "socialImage": null,
+        "noIndex": false
+      },
+      "blocks": []
+    },
+    {
+      "id": "page-50",
+      "slug": "page-50",
+      "title": "Page 50",
+      "seo": {
+        "title": "Page 50",
+        "description": "",
+        "socialImage": null,
+        "noIndex": false
+      },
+      "blocks": []
+    },
+    {
+      "id": "page-51",
+      "slug": "page-51",
+      "title": "Page 51",
+      "seo": {
+        "title": "Page 51",
+        "description": "",
+        "socialImage": null,
+        "noIndex": false
+      },
+      "blocks": []
+    }
+  ]
+}

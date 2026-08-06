@@ -1,0 +1,3208 @@
+{
+  "id": "site-contract",
+  "schemaVersion": 4,
+  "name": "M",
+  "theme": {
+    "pageBackground": "#ffffff",
+    "surfaceColor": "#f5f7fb",
+    "textColor": "#111827",
+    "mutedTextColor": "#5f6b7a",
+    "accentColor": "#0a7f72",
+    "fontPairing": "grotesk",
+    "typeScale": "balanced",
+    "contentWidth": "wide",
+    "sectionSpacing": "balanced",
+    "buttonShape": "rounded",
+    "radius": 8
+  },
+  "business": {
+    "brandName": "Nexus Studio",
+    "logo": null,
+    "phone": "+7 999 000-00-00",
+    "email": "hello@nexus.app",
+    "address": "",
+    "hours": "",
+    "messengers": [],
+    "socialLinks": []
+  },
+  "seo": {
+    "language": "ru",
+    "favicon": null
+  },
+  "chrome": {
+    "header": {
+      "id": "header-main",
+      "anchor": "header",
+      "type": "siteHeader",
+      "appearance": {},
+      "hidden": false,
+      "design": {
+        "accentColor": "teal",
+        "fontPairing": "grotesk",
+        "density": "balanced",
+        "templateStyle": "classic"
+      },
+      "inheritBusiness": true,
+      "variant": "stretchedNav",
+      "brandName": "Nexus Studio",
+      "navigationItems": [
+        {
+          "id": "nav-home",
+          "label": "Главная",
+          "target": "#hero",
+          "kind": "anchor",
+          "openInNewTab": false
+        }
+      ],
+      "cta": {
+        "id": "header-cta",
+        "label": "Связаться",
+        "target": "#lead-form",
+        "kind": "anchor",
+        "openInNewTab": false
+      }
+    },
+    "footer": {
+      "id": "footer-main",
+      "anchor": "contact",
+      "type": "siteFooter",
+      "appearance": {},
+      "hidden": false,
+      "design": {
+        "accentColor": "teal",
+        "fontPairing": "grotesk",
+        "density": "balanced",
+        "templateStyle": "classic"
+      },
+      "inheritBusiness": true,
+      "variant": "bookingFooter",
+      "brandName": "Nexus Studio",
+      "cta": {
+        "id": "footer-cta",
+        "label": "Оставить заявку",
+        "target": "#lead-form",
+        "kind": "anchor",
+        "openInNewTab": false
+      },
+      "contactLines": [
+        "hello@nexus.app"
+      ],
+      "links": []
+    }
+  },
+  "pages": [
+    {
+      "id": "page-minimal",
+      "slug": "minimal",
+      "title": "M",
+      "seo": {
+        "title": "M",
+        "description": "",
+        "socialImage": null,
+        "noIndex": false
+      },
+      "blocks": [
+        {
+          "id": "hero-1",
+          "anchor": "hero-1",
+          "type": "hero",
+          "appearance": {},
+          "hidden": false,
+          "design": {
+            "accentColor": "teal",
+            "fontPairing": "grotesk",
+            "density": "balanced",
+            "templateStyle": "classic"
+          },
+          "title": "Соберите сайт быстрее",
+          "subtitle": "Contract subtitle",
+          "buttonText": "Начать",
+          "buttonHref": "#lead-form",
+          "media": {
+            "src": "./images/landing/office-studio.webp",
+            "alt": "Рабочая зона",
+            "focalPoint": {
+              "x": 50,
+              "y": 50
+            }
+          },
+          "styles": {
+            "backgroundColor": "#f5f7fb",
+            "textColor": "#111827",
+            "minHeight": "520px",
+            "alignment": "center"
+          }
+        },
+        {
+          "id": "hero-2",
+          "anchor": "hero-2",
+          "type": "hero",
+          "appearance": {},
+          "hidden": false,
+          "design": {
+            "accentColor": "teal",
+            "fontPairing": "grotesk",
+            "density": "balanced",
+            "templateStyle": "classic"
+          },
+          "title": "Соберите сайт быстрее",
+          "subtitle": "Contract subtitle",
+          "buttonText": "Начать",
+          "buttonHref": "#lead-form",
+          "media": {
+            "src": "./images/landing/office-studio.webp",
+            "alt": "Рабочая зона",
+            "focalPoint": {
+              "x": 50,
+              "y": 50
+            }
+          },
+          "styles": {
+            "backgroundColor": "#f5f7fb",
+            "textColor": "#111827",
+            "minHeight": "520px",
+            "alignment": "center"
+          }
+        },
+        {
+          "id": "hero-3",
+          "anchor": "hero-3",
+          "type": "hero",
+          "appearance": {},
+          "hidden": false,
+          "design": {
+            "accentColor": "teal",
+            "fontPairing": "grotesk",
+            "density": "balanced",
+            "templateStyle": "classic"
+          },
+          "title": "Соберите сайт быстрее",
+          "subtitle": "Contract subtitle",
+          "buttonText": "Начать",
+          "buttonHref": "#lead-form",
+          "media": {
+            "src": "./images/landing/office-studio.webp",
+            "alt": "Рабочая зона",
+            "focalPoint": {
+              "x": 50,
+              "y": 50
+            }
+          },
+          "styles": {
+            "backgroundColor": "#f5f7fb",
+            "textColor": "#111827",
+            "minHeight": "520px",
+            "alignment": "center"
+          }
+        },
+        {
+          "id": "hero-4",
+          "anchor": "hero-4",
+          "type": "hero",
+          "appearance": {},
+          "hidden": false,
+          "design": {
+            "accentColor": "teal",
+            "fontPairing": "grotesk",
+            "density": "balanced",
+            "templateStyle": "classic"
+          },
+          "title": "Соберите сайт быстрее",
+          "subtitle": "Contract subtitle",
+          "buttonText": "Начать",
+          "buttonHref": "#lead-form",
+          "media": {
+            "src": "./images/landing/office-studio.webp",
+            "alt": "Рабочая зона",
+            "focalPoint": {
+              "x": 50,
+              "y": 50
+            }
+          },
+          "styles": {
+            "backgroundColor": "#f5f7fb",
+            "textColor": "#111827",
+            "minHeight": "520px",
+            "alignment": "center"
+          }
+        },
+        {
+          "id": "hero-5",
+          "anchor": "hero-5",
+          "type": "hero",
+          "appearance": {},
+          "hidden": false,
+          "design": {
+            "accentColor": "teal",
+            "fontPairing": "grotesk",
+            "density": "balanced",
+            "templateStyle": "classic"
+          },
+          "title": "Соберите сайт быстрее",
+          "subtitle": "Contract subtitle",
+          "buttonText": "Начать",
+          "buttonHref": "#lead-form",
+          "media": {
+            "src": "./images/landing/office-studio.webp",
+            "alt": "Рабочая зона",
+            "focalPoint": {
+              "x": 50,
+              "y": 50
+            }
+          },
+          "styles": {
+            "backgroundColor": "#f5f7fb",
+            "textColor": "#111827",
+            "minHeight": "520px",
+            "alignment": "center"
+          }
+        },
+        {
+          "id": "hero-6",
+          "anchor": "hero-6",
+          "type": "hero",
+          "appearance": {},
+          "hidden": false,
+          "design": {
+            "accentColor": "teal",
+            "fontPairing": "grotesk",
+            "density": "balanced",
+            "templateStyle": "classic"
+          },
+          "title": "Соберите сайт быстрее",
+          "subtitle": "Contract subtitle",
+          "buttonText": "Начать",
+          "buttonHref": "#lead-form",
+          "media": {
+            "src": "./images/landing/office-studio.webp",
+            "alt": "Рабочая зона",
+            "focalPoint": {
+              "x": 50,
+              "y": 50
+            }
+          },
+          "styles": {
+            "backgroundColor": "#f5f7fb",
+            "textColor": "#111827",
+            "minHeight": "520px",
+            "alignment": "center"
+          }
+        },
+        {
+          "id": "hero-7",
+          "anchor": "hero-7",
+          "type": "hero",
+          "appearance": {},
+          "hidden": false,
+          "design": {
+            "accentColor": "teal",
+            "fontPairing": "grotesk",
+            "density": "balanced",
+            "templateStyle": "classic"
+          },
+          "title": "Соберите сайт быстрее",
+          "subtitle": "Contract subtitle",
+          "buttonText": "Начать",
+          "buttonHref": "#lead-form",
+          "media": {
+            "src": "./images/landing/office-studio.webp",
+            "alt": "Рабочая зона",
+            "focalPoint": {
+              "x": 50,
+              "y": 50
+            }
+          },
+          "styles": {
+            "backgroundColor": "#f5f7fb",
+            "textColor": "#111827",
+            "minHeight": "520px",
+            "alignment": "center"
+          }
+        },
+        {
+          "id": "hero-8",
+          "anchor": "hero-8",
+          "type": "hero",
+          "appearance": {},
+          "hidden": false,
+          "design": {
+            "accentColor": "teal",
+            "fontPairing": "grotesk",
+            "density": "balanced",
+            "templateStyle": "classic"
+          },
+          "title": "Соберите сайт быстрее",
+          "subtitle": "Contract subtitle",
+          "buttonText": "Начать",
+          "buttonHref": "#lead-form",
+          "media": {
+            "src": "./images/landing/office-studio.webp",
+            "alt": "Рабочая зона",
+            "focalPoint": {
+              "x": 50,
+              "y": 50
+            }
+          },
+          "styles": {
+            "backgroundColor": "#f5f7fb",
+            "textColor": "#111827",
+            "minHeight": "520px",
+            "alignment": "center"
+          }
+        },
+        {
+          "id": "hero-9",
+          "anchor": "hero-9",
+          "type": "hero",
+          "appearance": {},
+          "hidden": false,
+          "design": {
+            "accentColor": "teal",
+            "fontPairing": "grotesk",
+            "density": "balanced",
+            "templateStyle": "classic"
+          },
+          "title": "Соберите сайт быстрее",
+          "subtitle": "Contract subtitle",
+          "buttonText": "Начать",
+          "buttonHref": "#lead-form",
+          "media": {
+            "src": "./images/landing/office-studio.webp",
+            "alt": "Рабочая зона",
+            "focalPoint": {
+              "x": 50,
+              "y": 50
+            }
+          },
+          "styles": {
+            "backgroundColor": "#f5f7fb",
+            "textColor": "#111827",
+            "minHeight": "520px",
+            "alignment": "center"
+          }
+        },
+        {
+          "id": "hero-10",
+          "anchor": "hero-10",
+          "type": "hero",
+          "appearance": {},
+          "hidden": false,
+          "design": {
+            "accentColor": "teal",
+            "fontPairing": "grotesk",
+            "density": "balanced",
+            "templateStyle": "classic"
+          },
+          "title": "Соберите сайт быстрее",
+          "subtitle": "Contract subtitle",
+          "buttonText": "Начать",
+          "buttonHref": "#lead-form",
+          "media": {
+            "src": "./images/landing/office-studio.webp",
+            "alt": "Рабочая зона",
+            "focalPoint": {
+              "x": 50,
+              "y": 50
+            }
+          },
+          "styles": {
+            "backgroundColor": "#f5f7fb",
+            "textColor": "#111827",
+            "minHeight": "520px",
+            "alignment": "center"
+          }
+        },
+        {
+          "id": "hero-11",
+          "anchor": "hero-11",
+          "type": "hero",
+          "appearance": {},
+          "hidden": false,
+          "design": {
+            "accentColor": "teal",
+            "fontPairing": "grotesk",
+            "density": "balanced",
+            "templateStyle": "classic"
+          },
+          "title": "Соберите сайт быстрее",
+          "subtitle": "Contract subtitle",
+          "buttonText": "Начать",
+          "buttonHref": "#lead-form",
+          "media": {
+            "src": "./images/landing/office-studio.webp",
+            "alt": "Рабочая зона",
+            "focalPoint": {
+              "x": 50,
+              "y": 50
+            }
+          },
+          "styles": {
+            "backgroundColor": "#f5f7fb",
+            "textColor": "#111827",
+            "minHeight": "520px",
+            "alignment": "center"
+          }
+        },
+        {
+          "id": "hero-12",
+          "anchor": "hero-12",
+          "type": "hero",
+          "appearance": {},
+          "hidden": false,
+          "design": {
+            "accentColor": "teal",
+            "fontPairing": "grotesk",
+            "density": "balanced",
+            "templateStyle": "classic"
+          },
+          "title": "Соберите сайт быстрее",
+          "subtitle": "Contract subtitle",
+          "buttonText": "Начать",
+          "buttonHref": "#lead-form",
+          "media": {
+            "src": "./images/landing/office-studio.webp",
+            "alt": "Рабочая зона",
+            "focalPoint": {
+              "x": 50,
+              "y": 50
+            }
+          },
+          "styles": {
+            "backgroundColor": "#f5f7fb",
+            "textColor": "#111827",
+            "minHeight": "520px",
+            "alignment": "center"
+          }
+        },
+        {
+          "id": "hero-13",
+          "anchor": "hero-13",
+          "type": "hero",
+          "appearance": {},
+          "hidden": false,
+          "design": {
+            "accentColor": "teal",
+            "fontPairing": "grotesk",
+            "density": "balanced",
+            "templateStyle": "classic"
+          },
+          "title": "Соберите сайт быстрее",
+          "subtitle": "Contract subtitle",
+          "buttonText": "Начать",
+          "buttonHref": "#lead-form",
+          "media": {
+            "src": "./images/landing/office-studio.webp",
+            "alt": "Рабочая зона",
+            "focalPoint": {
+              "x": 50,
+              "y": 50
+            }
+          },
+          "styles": {
+            "backgroundColor": "#f5f7fb",
+            "textColor": "#111827",
+            "minHeight": "520px",
+            "alignment": "center"
+          }
+        },
+        {
+          "id": "hero-14",
+          "anchor": "hero-14",
+          "type": "hero",
+          "appearance": {},
+          "hidden": false,
+          "design": {
+            "accentColor": "teal",
+            "fontPairing": "grotesk",
+            "density": "balanced",
+            "templateStyle": "classic"
+          },
+          "title": "Соберите сайт быстрее",
+          "subtitle": "Contract subtitle",
+          "buttonText": "Начать",
+          "buttonHref": "#lead-form",
+          "media": {
+            "src": "./images/landing/office-studio.webp",
+            "alt": "Рабочая зона",
+            "focalPoint": {
+              "x": 50,
+              "y": 50
+            }
+          },
+          "styles": {
+            "backgroundColor": "#f5f7fb",
+            "textColor": "#111827",
+            "minHeight": "520px",
+            "alignment": "center"
+          }
+        },
+        {
+          "id": "hero-15",
+          "anchor": "hero-15",
+          "type": "hero",
+          "appearance": {},
+          "hidden": false,
+          "design": {
+            "accentColor": "teal",
+            "fontPairing": "grotesk",
+            "density": "balanced",
+            "templateStyle": "classic"
+          },
+          "title": "Соберите сайт быстрее",
+          "subtitle": "Contract subtitle",
+          "buttonText": "Начать",
+          "buttonHref": "#lead-form",
+          "media": {
+            "src": "./images/landing/office-studio.webp",
+            "alt": "Рабочая зона",
+            "focalPoint": {
+              "x": 50,
+              "y": 50
+            }
+          },
+          "styles": {
+            "backgroundColor": "#f5f7fb",
+            "textColor": "#111827",
+            "minHeight": "520px",
+            "alignment": "center"
+          }
+        },
+        {
+          "id": "hero-16",
+          "anchor": "hero-16",
+          "type": "hero",
+          "appearance": {},
+          "hidden": false,
+          "design": {
+            "accentColor": "teal",
+            "fontPairing": "grotesk",
+            "density": "balanced",
+            "templateStyle": "classic"
+          },
+          "title": "Соберите сайт быстрее",
+          "subtitle": "Contract subtitle",
+          "buttonText": "Начать",
+          "buttonHref": "#lead-form",
+          "media": {
+            "src": "./images/landing/office-studio.webp",
+            "alt": "Рабочая зона",
+            "focalPoint": {
+              "x": 50,
+              "y": 50
+            }
+          },
+          "styles": {
+            "backgroundColor": "#f5f7fb",
+            "textColor": "#111827",
+            "minHeight": "520px",
+            "alignment": "center"
+          }
+        },
+        {
+          "id": "hero-17",
+          "anchor": "hero-17",
+          "type": "hero",
+          "appearance": {},
+          "hidden": false,
+          "design": {
+            "accentColor": "teal",
+            "fontPairing": "grotesk",
+            "density": "balanced",
+            "templateStyle": "classic"
+          },
+          "title": "Соберите сайт быстрее",
+          "subtitle": "Contract subtitle",
+          "buttonText": "Начать",
+          "buttonHref": "#lead-form",
+          "media": {
+            "src": "./images/landing/office-studio.webp",
+            "alt": "Рабочая зона",
+            "focalPoint": {
+              "x": 50,
+              "y": 50
+            }
+          },
+          "styles": {
+            "backgroundColor": "#f5f7fb",
+            "textColor": "#111827",
+            "minHeight": "520px",
+            "alignment": "center"
+          }
+        },
+        {
+          "id": "hero-18",
+          "anchor": "hero-18",
+          "type": "hero",
+          "appearance": {},
+          "hidden": false,
+          "design": {
+            "accentColor": "teal",
+            "fontPairing": "grotesk",
+            "density": "balanced",
+            "templateStyle": "classic"
+          },
+          "title": "Соберите сайт быстрее",
+          "subtitle": "Contract subtitle",
+          "buttonText": "Начать",
+          "buttonHref": "#lead-form",
+          "media": {
+            "src": "./images/landing/office-studio.webp",
+            "alt": "Рабочая зона",
+            "focalPoint": {
+              "x": 50,
+              "y": 50
+            }
+          },
+          "styles": {
+            "backgroundColor": "#f5f7fb",
+            "textColor": "#111827",
+            "minHeight": "520px",
+            "alignment": "center"
+          }
+        },
+        {
+          "id": "hero-19",
+          "anchor": "hero-19",
+          "type": "hero",
+          "appearance": {},
+          "hidden": false,
+          "design": {
+            "accentColor": "teal",
+            "fontPairing": "grotesk",
+            "density": "balanced",
+            "templateStyle": "classic"
+          },
+          "title": "Соберите сайт быстрее",
+          "subtitle": "Contract subtitle",
+          "buttonText": "Начать",
+          "buttonHref": "#lead-form",
+          "media": {
+            "src": "./images/landing/office-studio.webp",
+            "alt": "Рабочая зона",
+            "focalPoint": {
+              "x": 50,
+              "y": 50
+            }
+          },
+          "styles": {
+            "backgroundColor": "#f5f7fb",
+            "textColor": "#111827",
+            "minHeight": "520px",
+            "alignment": "center"
+          }
+        },
+        {
+          "id": "hero-20",
+          "anchor": "hero-20",
+          "type": "hero",
+          "appearance": {},
+          "hidden": false,
+          "design": {
+            "accentColor": "teal",
+            "fontPairing": "grotesk",
+            "density": "balanced",
+            "templateStyle": "classic"
+          },
+          "title": "Соберите сайт быстрее",
+          "subtitle": "Contract subtitle",
+          "buttonText": "Начать",
+          "buttonHref": "#lead-form",
+          "media": {
+            "src": "./images/landing/office-studio.webp",
+            "alt": "Рабочая зона",
+            "focalPoint": {
+              "x": 50,
+              "y": 50
+            }
+          },
+          "styles": {
+            "backgroundColor": "#f5f7fb",
+            "textColor": "#111827",
+            "minHeight": "520px",
+            "alignment": "center"
+          }
+        },
+        {
+          "id": "hero-21",
+          "anchor": "hero-21",
+          "type": "hero",
+          "appearance": {},
+          "hidden": false,
+          "design": {
+            "accentColor": "teal",
+            "fontPairing": "grotesk",
+            "density": "balanced",
+            "templateStyle": "classic"
+          },
+          "title": "Соберите сайт быстрее",
+          "subtitle": "Contract subtitle",
+          "buttonText": "Начать",
+          "buttonHref": "#lead-form",
+          "media": {
+            "src": "./images/landing/office-studio.webp",
+            "alt": "Рабочая зона",
+            "focalPoint": {
+              "x": 50,
+              "y": 50
+            }
+          },
+          "styles": {
+            "backgroundColor": "#f5f7fb",
+            "textColor": "#111827",
+            "minHeight": "520px",
+            "alignment": "center"
+          }
+        },
+        {
+          "id": "hero-22",
+          "anchor": "hero-22",
+          "type": "hero",
+          "appearance": {},
+          "hidden": false,
+          "design": {
+            "accentColor": "teal",
+            "fontPairing": "grotesk",
+            "density": "balanced",
+            "templateStyle": "classic"
+          },
+          "title": "Соберите сайт быстрее",
+          "subtitle": "Contract subtitle",
+          "buttonText": "Начать",
+          "buttonHref": "#lead-form",
+          "media": {
+            "src": "./images/landing/office-studio.webp",
+            "alt": "Рабочая зона",
+            "focalPoint": {
+              "x": 50,
+              "y": 50
+            }
+          },
+          "styles": {
+            "backgroundColor": "#f5f7fb",
+            "textColor": "#111827",
+            "minHeight": "520px",
+            "alignment": "center"
+          }
+        },
+        {
+          "id": "hero-23",
+          "anchor": "hero-23",
+          "type": "hero",
+          "appearance": {},
+          "hidden": false,
+          "design": {
+            "accentColor": "teal",
+            "fontPairing": "grotesk",
+            "density": "balanced",
+            "templateStyle": "classic"
+          },
+          "title": "Соберите сайт быстрее",
+          "subtitle": "Contract subtitle",
+          "buttonText": "Начать",
+          "buttonHref": "#lead-form",
+          "media": {
+            "src": "./images/landing/office-studio.webp",
+            "alt": "Рабочая зона",
+            "focalPoint": {
+              "x": 50,
+              "y": 50
+            }
+          },
+          "styles": {
+            "backgroundColor": "#f5f7fb",
+            "textColor": "#111827",
+            "minHeight": "520px",
+            "alignment": "center"
+          }
+        },
+        {
+          "id": "hero-24",
+          "anchor": "hero-24",
+          "type": "hero",
+          "appearance": {},
+          "hidden": false,
+          "design": {
+            "accentColor": "teal",
+            "fontPairing": "grotesk",
+            "density": "balanced",
+            "templateStyle": "classic"
+          },
+          "title": "Соберите сайт быстрее",
+          "subtitle": "Contract subtitle",
+          "buttonText": "Начать",
+          "buttonHref": "#lead-form",
+          "media": {
+            "src": "./images/landing/office-studio.webp",
+            "alt": "Рабочая зона",
+            "focalPoint": {
+              "x": 50,
+              "y": 50
+            }
+          },
+          "styles": {
+            "backgroundColor": "#f5f7fb",
+            "textColor": "#111827",
+            "minHeight": "520px",
+            "alignment": "center"
+          }
+        },
+        {
+          "id": "hero-25",
+          "anchor": "hero-25",
+          "type": "hero",
+          "appearance": {},
+          "hidden": false,
+          "design": {
+            "accentColor": "teal",
+            "fontPairing": "grotesk",
+            "density": "balanced",
+            "templateStyle": "classic"
+          },
+          "title": "Соберите сайт быстрее",
+          "subtitle": "Contract subtitle",
+          "buttonText": "Начать",
+          "buttonHref": "#lead-form",
+          "media": {
+            "src": "./images/landing/office-studio.webp",
+            "alt": "Рабочая зона",
+            "focalPoint": {
+              "x": 50,
+              "y": 50
+            }
+          },
+          "styles": {
+            "backgroundColor": "#f5f7fb",
+            "textColor": "#111827",
+            "minHeight": "520px",
+            "alignment": "center"
+          }
+        },
+        {
+          "id": "hero-26",
+          "anchor": "hero-26",
+          "type": "hero",
+          "appearance": {},
+          "hidden": false,
+          "design": {
+            "accentColor": "teal",
+            "fontPairing": "grotesk",
+            "density": "balanced",
+            "templateStyle": "classic"
+          },
+          "title": "Соберите сайт быстрее",
+          "subtitle": "Contract subtitle",
+          "buttonText": "Начать",
+          "buttonHref": "#lead-form",
+          "media": {
+            "src": "./images/landing/office-studio.webp",
+            "alt": "Рабочая зона",
+            "focalPoint": {
+              "x": 50,
+              "y": 50
+            }
+          },
+          "styles": {
+            "backgroundColor": "#f5f7fb",
+            "textColor": "#111827",
+            "minHeight": "520px",
+            "alignment": "center"
+          }
+        },
+        {
+          "id": "hero-27",
+          "anchor": "hero-27",
+          "type": "hero",
+          "appearance": {},
+          "hidden": false,
+          "design": {
+            "accentColor": "teal",
+            "fontPairing": "grotesk",
+            "density": "balanced",
+            "templateStyle": "classic"
+          },
+          "title": "Соберите сайт быстрее",
+          "subtitle": "Contract subtitle",
+          "buttonText": "Начать",
+          "buttonHref": "#lead-form",
+          "media": {
+            "src": "./images/landing/office-studio.webp",
+            "alt": "Рабочая зона",
+            "focalPoint": {
+              "x": 50,
+              "y": 50
+            }
+          },
+          "styles": {
+            "backgroundColor": "#f5f7fb",
+            "textColor": "#111827",
+            "minHeight": "520px",
+            "alignment": "center"
+          }
+        },
+        {
+          "id": "hero-28",
+          "anchor": "hero-28",
+          "type": "hero",
+          "appearance": {},
+          "hidden": false,
+          "design": {
+            "accentColor": "teal",
+            "fontPairing": "grotesk",
+            "density": "balanced",
+            "templateStyle": "classic"
+          },
+          "title": "Соберите сайт быстрее",
+          "subtitle": "Contract subtitle",
+          "buttonText": "Начать",
+          "buttonHref": "#lead-form",
+          "media": {
+            "src": "./images/landing/office-studio.webp",
+            "alt": "Рабочая зона",
+            "focalPoint": {
+              "x": 50,
+              "y": 50
+            }
+          },
+          "styles": {
+            "backgroundColor": "#f5f7fb",
+            "textColor": "#111827",
+            "minHeight": "520px",
+            "alignment": "center"
+          }
+        },
+        {
+          "id": "hero-29",
+          "anchor": "hero-29",
+          "type": "hero",
+          "appearance": {},
+          "hidden": false,
+          "design": {
+            "accentColor": "teal",
+            "fontPairing": "grotesk",
+            "density": "balanced",
+            "templateStyle": "classic"
+          },
+          "title": "Соберите сайт быстрее",
+          "subtitle": "Contract subtitle",
+          "buttonText": "Начать",
+          "buttonHref": "#lead-form",
+          "media": {
+            "src": "./images/landing/office-studio.webp",
+            "alt": "Рабочая зона",
+            "focalPoint": {
+              "x": 50,
+              "y": 50
+            }
+          },
+          "styles": {
+            "backgroundColor": "#f5f7fb",
+            "textColor": "#111827",
+            "minHeight": "520px",
+            "alignment": "center"
+          }
+        },
+        {
+          "id": "hero-30",
+          "anchor": "hero-30",
+          "type": "hero",
+          "appearance": {},
+          "hidden": false,
+          "design": {
+            "accentColor": "teal",
+            "fontPairing": "grotesk",
+            "density": "balanced",
+            "templateStyle": "classic"
+          },
+          "title": "Соберите сайт быстрее",
+          "subtitle": "Contract subtitle",
+          "buttonText": "Начать",
+          "buttonHref": "#lead-form",
+          "media": {
+            "src": "./images/landing/office-studio.webp",
+            "alt": "Рабочая зона",
+            "focalPoint": {
+              "x": 50,
+              "y": 50
+            }
+          },
+          "styles": {
+            "backgroundColor": "#f5f7fb",
+            "textColor": "#111827",
+            "minHeight": "520px",
+            "alignment": "center"
+          }
+        },
+        {
+          "id": "hero-31",
+          "anchor": "hero-31",
+          "type": "hero",
+          "appearance": {},
+          "hidden": false,
+          "design": {
+            "accentColor": "teal",
+            "fontPairing": "grotesk",
+            "density": "balanced",
+            "templateStyle": "classic"
+          },
+          "title": "Соберите сайт быстрее",
+          "subtitle": "Contract subtitle",
+          "buttonText": "Начать",
+          "buttonHref": "#lead-form",
+          "media": {
+            "src": "./images/landing/office-studio.webp",
+            "alt": "Рабочая зона",
+            "focalPoint": {
+              "x": 50,
+              "y": 50
+            }
+          },
+          "styles": {
+            "backgroundColor": "#f5f7fb",
+            "textColor": "#111827",
+            "minHeight": "520px",
+            "alignment": "center"
+          }
+        },
+        {
+          "id": "hero-32",
+          "anchor": "hero-32",
+          "type": "hero",
+          "appearance": {},
+          "hidden": false,
+          "design": {
+            "accentColor": "teal",
+            "fontPairing": "grotesk",
+            "density": "balanced",
+            "templateStyle": "classic"
+          },
+          "title": "Соберите сайт быстрее",
+          "subtitle": "Contract subtitle",
+          "buttonText": "Начать",
+          "buttonHref": "#lead-form",
+          "media": {
+            "src": "./images/landing/office-studio.webp",
+            "alt": "Рабочая зона",
+            "focalPoint": {
+              "x": 50,
+              "y": 50
+            }
+          },
+          "styles": {
+            "backgroundColor": "#f5f7fb",
+            "textColor": "#111827",
+            "minHeight": "520px",
+            "alignment": "center"
+          }
+        },
+        {
+          "id": "hero-33",
+          "anchor": "hero-33",
+          "type": "hero",
+          "appearance": {},
+          "hidden": false,
+          "design": {
+            "accentColor": "teal",
+            "fontPairing": "grotesk",
+            "density": "balanced",
+            "templateStyle": "classic"
+          },
+          "title": "Соберите сайт быстрее",
+          "subtitle": "Contract subtitle",
+          "buttonText": "Начать",
+          "buttonHref": "#lead-form",
+          "media": {
+            "src": "./images/landing/office-studio.webp",
+            "alt": "Рабочая зона",
+            "focalPoint": {
+              "x": 50,
+              "y": 50
+            }
+          },
+          "styles": {
+            "backgroundColor": "#f5f7fb",
+            "textColor": "#111827",
+            "minHeight": "520px",
+            "alignment": "center"
+          }
+        },
+        {
+          "id": "hero-34",
+          "anchor": "hero-34",
+          "type": "hero",
+          "appearance": {},
+          "hidden": false,
+          "design": {
+            "accentColor": "teal",
+            "fontPairing": "grotesk",
+            "density": "balanced",
+            "templateStyle": "classic"
+          },
+          "title": "Соберите сайт быстрее",
+          "subtitle": "Contract subtitle",
+          "buttonText": "Начать",
+          "buttonHref": "#lead-form",
+          "media": {
+            "src": "./images/landing/office-studio.webp",
+            "alt": "Рабочая зона",
+            "focalPoint": {
+              "x": 50,
+              "y": 50
+            }
+          },
+          "styles": {
+            "backgroundColor": "#f5f7fb",
+            "textColor": "#111827",
+            "minHeight": "520px",
+            "alignment": "center"
+          }
+        },
+        {
+          "id": "hero-35",
+          "anchor": "hero-35",
+          "type": "hero",
+          "appearance": {},
+          "hidden": false,
+          "design": {
+            "accentColor": "teal",
+            "fontPairing": "grotesk",
+            "density": "balanced",
+            "templateStyle": "classic"
+          },
+          "title": "Соберите сайт быстрее",
+          "subtitle": "Contract subtitle",
+          "buttonText": "Начать",
+          "buttonHref": "#lead-form",
+          "media": {
+            "src": "./images/landing/office-studio.webp",
+            "alt": "Рабочая зона",
+            "focalPoint": {
+              "x": 50,
+              "y": 50
+            }
+          },
+          "styles": {
+            "backgroundColor": "#f5f7fb",
+            "textColor": "#111827",
+            "minHeight": "520px",
+            "alignment": "center"
+          }
+        },
+        {
+          "id": "hero-36",
+          "anchor": "hero-36",
+          "type": "hero",
+          "appearance": {},
+          "hidden": false,
+          "design": {
+            "accentColor": "teal",
+            "fontPairing": "grotesk",
+            "density": "balanced",
+            "templateStyle": "classic"
+          },
+          "title": "Соберите сайт быстрее",
+          "subtitle": "Contract subtitle",
+          "buttonText": "Начать",
+          "buttonHref": "#lead-form",
+          "media": {
+            "src": "./images/landing/office-studio.webp",
+            "alt": "Рабочая зона",
+            "focalPoint": {
+              "x": 50,
+              "y": 50
+            }
+          },
+          "styles": {
+            "backgroundColor": "#f5f7fb",
+            "textColor": "#111827",
+            "minHeight": "520px",
+            "alignment": "center"
+          }
+        },
+        {
+          "id": "hero-37",
+          "anchor": "hero-37",
+          "type": "hero",
+          "appearance": {},
+          "hidden": false,
+          "design": {
+            "accentColor": "teal",
+            "fontPairing": "grotesk",
+            "density": "balanced",
+            "templateStyle": "classic"
+          },
+          "title": "Соберите сайт быстрее",
+          "subtitle": "Contract subtitle",
+          "buttonText": "Начать",
+          "buttonHref": "#lead-form",
+          "media": {
+            "src": "./images/landing/office-studio.webp",
+            "alt": "Рабочая зона",
+            "focalPoint": {
+              "x": 50,
+              "y": 50
+            }
+          },
+          "styles": {
+            "backgroundColor": "#f5f7fb",
+            "textColor": "#111827",
+            "minHeight": "520px",
+            "alignment": "center"
+          }
+        },
+        {
+          "id": "hero-38",
+          "anchor": "hero-38",
+          "type": "hero",
+          "appearance": {},
+          "hidden": false,
+          "design": {
+            "accentColor": "teal",
+            "fontPairing": "grotesk",
+            "density": "balanced",
+            "templateStyle": "classic"
+          },
+          "title": "Соберите сайт быстрее",
+          "subtitle": "Contract subtitle",
+          "buttonText": "Начать",
+          "buttonHref": "#lead-form",
+          "media": {
+            "src": "./images/landing/office-studio.webp",
+            "alt": "Рабочая зона",
+            "focalPoint": {
+              "x": 50,
+              "y": 50
+            }
+          },
+          "styles": {
+            "backgroundColor": "#f5f7fb",
+            "textColor": "#111827",
+            "minHeight": "520px",
+            "alignment": "center"
+          }
+        },
+        {
+          "id": "hero-39",
+          "anchor": "hero-39",
+          "type": "hero",
+          "appearance": {},
+          "hidden": false,
+          "design": {
+            "accentColor": "teal",
+            "fontPairing": "grotesk",
+            "density": "balanced",
+            "templateStyle": "classic"
+          },
+          "title": "Соберите сайт быстрее",
+          "subtitle": "Contract subtitle",
+          "buttonText": "Начать",
+          "buttonHref": "#lead-form",
+          "media": {
+            "src": "./images/landing/office-studio.webp",
+            "alt": "Рабочая зона",
+            "focalPoint": {
+              "x": 50,
+              "y": 50
+            }
+          },
+          "styles": {
+            "backgroundColor": "#f5f7fb",
+            "textColor": "#111827",
+            "minHeight": "520px",
+            "alignment": "center"
+          }
+        },
+        {
+          "id": "hero-40",
+          "anchor": "hero-40",
+          "type": "hero",
+          "appearance": {},
+          "hidden": false,
+          "design": {
+            "accentColor": "teal",
+            "fontPairing": "grotesk",
+            "density": "balanced",
+            "templateStyle": "classic"
+          },
+          "title": "Соберите сайт быстрее",
+          "subtitle": "Contract subtitle",
+          "buttonText": "Начать",
+          "buttonHref": "#lead-form",
+          "media": {
+            "src": "./images/landing/office-studio.webp",
+            "alt": "Рабочая зона",
+            "focalPoint": {
+              "x": 50,
+              "y": 50
+            }
+          },
+          "styles": {
+            "backgroundColor": "#f5f7fb",
+            "textColor": "#111827",
+            "minHeight": "520px",
+            "alignment": "center"
+          }
+        },
+        {
+          "id": "hero-41",
+          "anchor": "hero-41",
+          "type": "hero",
+          "appearance": {},
+          "hidden": false,
+          "design": {
+            "accentColor": "teal",
+            "fontPairing": "grotesk",
+            "density": "balanced",
+            "templateStyle": "classic"
+          },
+          "title": "Соберите сайт быстрее",
+          "subtitle": "Contract subtitle",
+          "buttonText": "Начать",
+          "buttonHref": "#lead-form",
+          "media": {
+            "src": "./images/landing/office-studio.webp",
+            "alt": "Рабочая зона",
+            "focalPoint": {
+              "x": 50,
+              "y": 50
+            }
+          },
+          "styles": {
+            "backgroundColor": "#f5f7fb",
+            "textColor": "#111827",
+            "minHeight": "520px",
+            "alignment": "center"
+          }
+        },
+        {
+          "id": "hero-42",
+          "anchor": "hero-42",
+          "type": "hero",
+          "appearance": {},
+          "hidden": false,
+          "design": {
+            "accentColor": "teal",
+            "fontPairing": "grotesk",
+            "density": "balanced",
+            "templateStyle": "classic"
+          },
+          "title": "Соберите сайт быстрее",
+          "subtitle": "Contract subtitle",
+          "buttonText": "Начать",
+          "buttonHref": "#lead-form",
+          "media": {
+            "src": "./images/landing/office-studio.webp",
+            "alt": "Рабочая зона",
+            "focalPoint": {
+              "x": 50,
+              "y": 50
+            }
+          },
+          "styles": {
+            "backgroundColor": "#f5f7fb",
+            "textColor": "#111827",
+            "minHeight": "520px",
+            "alignment": "center"
+          }
+        },
+        {
+          "id": "hero-43",
+          "anchor": "hero-43",
+          "type": "hero",
+          "appearance": {},
+          "hidden": false,
+          "design": {
+            "accentColor": "teal",
+            "fontPairing": "grotesk",
+            "density": "balanced",
+            "templateStyle": "classic"
+          },
+          "title": "Соберите сайт быстрее",
+          "subtitle": "Contract subtitle",
+          "buttonText": "Начать",
+          "buttonHref": "#lead-form",
+          "media": {
+            "src": "./images/landing/office-studio.webp",
+            "alt": "Рабочая зона",
+            "focalPoint": {
+              "x": 50,
+              "y": 50
+            }
+          },
+          "styles": {
+            "backgroundColor": "#f5f7fb",
+            "textColor": "#111827",
+            "minHeight": "520px",
+            "alignment": "center"
+          }
+        },
+        {
+          "id": "hero-44",
+          "anchor": "hero-44",
+          "type": "hero",
+          "appearance": {},
+          "hidden": false,
+          "design": {
+            "accentColor": "teal",
+            "fontPairing": "grotesk",
+            "density": "balanced",
+            "templateStyle": "classic"
+          },
+          "title": "Соберите сайт быстрее",
+          "subtitle": "Contract subtitle",
+          "buttonText": "Начать",
+          "buttonHref": "#lead-form",
+          "media": {
+            "src": "./images/landing/office-studio.webp",
+            "alt": "Рабочая зона",
+            "focalPoint": {
+              "x": 50,
+              "y": 50
+            }
+          },
+          "styles": {
+            "backgroundColor": "#f5f7fb",
+            "textColor": "#111827",
+            "minHeight": "520px",
+            "alignment": "center"
+          }
+        },
+        {
+          "id": "hero-45",
+          "anchor": "hero-45",
+          "type": "hero",
+          "appearance": {},
+          "hidden": false,
+          "design": {
+            "accentColor": "teal",
+            "fontPairing": "grotesk",
+            "density": "balanced",
+            "templateStyle": "classic"
+          },
+          "title": "Соберите сайт быстрее",
+          "subtitle": "Contract subtitle",
+          "buttonText": "Начать",
+          "buttonHref": "#lead-form",
+          "media": {
+            "src": "./images/landing/office-studio.webp",
+            "alt": "Рабочая зона",
+            "focalPoint": {
+              "x": 50,
+              "y": 50
+            }
+          },
+          "styles": {
+            "backgroundColor": "#f5f7fb",
+            "textColor": "#111827",
+            "minHeight": "520px",
+            "alignment": "center"
+          }
+        },
+        {
+          "id": "hero-46",
+          "anchor": "hero-46",
+          "type": "hero",
+          "appearance": {},
+          "hidden": false,
+          "design": {
+            "accentColor": "teal",
+            "fontPairing": "grotesk",
+            "density": "balanced",
+            "templateStyle": "classic"
+          },
+          "title": "Соберите сайт быстрее",
+          "subtitle": "Contract subtitle",
+          "buttonText": "Начать",
+          "buttonHref": "#lead-form",
+          "media": {
+            "src": "./images/landing/office-studio.webp",
+            "alt": "Рабочая зона",
+            "focalPoint": {
+              "x": 50,
+              "y": 50
+            }
+          },
+          "styles": {
+            "backgroundColor": "#f5f7fb",
+            "textColor": "#111827",
+            "minHeight": "520px",
+            "alignment": "center"
+          }
+        },
+        {
+          "id": "hero-47",
+          "anchor": "hero-47",
+          "type": "hero",
+          "appearance": {},
+          "hidden": false,
+          "design": {
+            "accentColor": "teal",
+            "fontPairing": "grotesk",
+            "density": "balanced",
+            "templateStyle": "classic"
+          },
+          "title": "Соберите сайт быстрее",
+          "subtitle": "Contract subtitle",
+          "buttonText": "Начать",
+          "buttonHref": "#lead-form",
+          "media": {
+            "src": "./images/landing/office-studio.webp",
+            "alt": "Рабочая зона",
+            "focalPoint": {
+              "x": 50,
+              "y": 50
+            }
+          },
+          "styles": {
+            "backgroundColor": "#f5f7fb",
+            "textColor": "#111827",
+            "minHeight": "520px",
+            "alignment": "center"
+          }
+        },
+        {
+          "id": "hero-48",
+          "anchor": "hero-48",
+          "type": "hero",
+          "appearance": {},
+          "hidden": false,
+          "design": {
+            "accentColor": "teal",
+            "fontPairing": "grotesk",
+            "density": "balanced",
+            "templateStyle": "classic"
+          },
+          "title": "Соберите сайт быстрее",
+          "subtitle": "Contract subtitle",
+          "buttonText": "Начать",
+          "buttonHref": "#lead-form",
+          "media": {
+            "src": "./images/landing/office-studio.webp",
+            "alt": "Рабочая зона",
+            "focalPoint": {
+              "x": 50,
+              "y": 50
+            }
+          },
+          "styles": {
+            "backgroundColor": "#f5f7fb",
+            "textColor": "#111827",
+            "minHeight": "520px",
+            "alignment": "center"
+          }
+        },
+        {
+          "id": "hero-49",
+          "anchor": "hero-49",
+          "type": "hero",
+          "appearance": {},
+          "hidden": false,
+          "design": {
+            "accentColor": "teal",
+            "fontPairing": "grotesk",
+            "density": "balanced",
+            "templateStyle": "classic"
+          },
+          "title": "Соберите сайт быстрее",
+          "subtitle": "Contract subtitle",
+          "buttonText": "Начать",
+          "buttonHref": "#lead-form",
+          "media": {
+            "src": "./images/landing/office-studio.webp",
+            "alt": "Рабочая зона",
+            "focalPoint": {
+              "x": 50,
+              "y": 50
+            }
+          },
+          "styles": {
+            "backgroundColor": "#f5f7fb",
+            "textColor": "#111827",
+            "minHeight": "520px",
+            "alignment": "center"
+          }
+        },
+        {
+          "id": "hero-50",
+          "anchor": "hero-50",
+          "type": "hero",
+          "appearance": {},
+          "hidden": false,
+          "design": {
+            "accentColor": "teal",
+            "fontPairing": "grotesk",
+            "density": "balanced",
+            "templateStyle": "classic"
+          },
+          "title": "Соберите сайт быстрее",
+          "subtitle": "Contract subtitle",
+          "buttonText": "Начать",
+          "buttonHref": "#lead-form",
+          "media": {
+            "src": "./images/landing/office-studio.webp",
+            "alt": "Рабочая зона",
+            "focalPoint": {
+              "x": 50,
+              "y": 50
+            }
+          },
+          "styles": {
+            "backgroundColor": "#f5f7fb",
+            "textColor": "#111827",
+            "minHeight": "520px",
+            "alignment": "center"
+          }
+        },
+        {
+          "id": "hero-51",
+          "anchor": "hero-51",
+          "type": "hero",
+          "appearance": {},
+          "hidden": false,
+          "design": {
+            "accentColor": "teal",
+            "fontPairing": "grotesk",
+            "density": "balanced",
+            "templateStyle": "classic"
+          },
+          "title": "Соберите сайт быстрее",
+          "subtitle": "Contract subtitle",
+          "buttonText": "Начать",
+          "buttonHref": "#lead-form",
+          "media": {
+            "src": "./images/landing/office-studio.webp",
+            "alt": "Рабочая зона",
+            "focalPoint": {
+              "x": 50,
+              "y": 50
+            }
+          },
+          "styles": {
+            "backgroundColor": "#f5f7fb",
+            "textColor": "#111827",
+            "minHeight": "520px",
+            "alignment": "center"
+          }
+        },
+        {
+          "id": "hero-52",
+          "anchor": "hero-52",
+          "type": "hero",
+          "appearance": {},
+          "hidden": false,
+          "design": {
+            "accentColor": "teal",
+            "fontPairing": "grotesk",
+            "density": "balanced",
+            "templateStyle": "classic"
+          },
+          "title": "Соберите сайт быстрее",
+          "subtitle": "Contract subtitle",
+          "buttonText": "Начать",
+          "buttonHref": "#lead-form",
+          "media": {
+            "src": "./images/landing/office-studio.webp",
+            "alt": "Рабочая зона",
+            "focalPoint": {
+              "x": 50,
+              "y": 50
+            }
+          },
+          "styles": {
+            "backgroundColor": "#f5f7fb",
+            "textColor": "#111827",
+            "minHeight": "520px",
+            "alignment": "center"
+          }
+        },
+        {
+          "id": "hero-53",
+          "anchor": "hero-53",
+          "type": "hero",
+          "appearance": {},
+          "hidden": false,
+          "design": {
+            "accentColor": "teal",
+            "fontPairing": "grotesk",
+            "density": "balanced",
+            "templateStyle": "classic"
+          },
+          "title": "Соберите сайт быстрее",
+          "subtitle": "Contract subtitle",
+          "buttonText": "Начать",
+          "buttonHref": "#lead-form",
+          "media": {
+            "src": "./images/landing/office-studio.webp",
+            "alt": "Рабочая зона",
+            "focalPoint": {
+              "x": 50,
+              "y": 50
+            }
+          },
+          "styles": {
+            "backgroundColor": "#f5f7fb",
+            "textColor": "#111827",
+            "minHeight": "520px",
+            "alignment": "center"
+          }
+        },
+        {
+          "id": "hero-54",
+          "anchor": "hero-54",
+          "type": "hero",
+          "appearance": {},
+          "hidden": false,
+          "design": {
+            "accentColor": "teal",
+            "fontPairing": "grotesk",
+            "density": "balanced",
+            "templateStyle": "classic"
+          },
+          "title": "Соберите сайт быстрее",
+          "subtitle": "Contract subtitle",
+          "buttonText": "Начать",
+          "buttonHref": "#lead-form",
+          "media": {
+            "src": "./images/landing/office-studio.webp",
+            "alt": "Рабочая зона",
+            "focalPoint": {
+              "x": 50,
+              "y": 50
+            }
+          },
+          "styles": {
+            "backgroundColor": "#f5f7fb",
+            "textColor": "#111827",
+            "minHeight": "520px",
+            "alignment": "center"
+          }
+        },
+        {
+          "id": "hero-55",
+          "anchor": "hero-55",
+          "type": "hero",
+          "appearance": {},
+          "hidden": false,
+          "design": {
+            "accentColor": "teal",
+            "fontPairing": "grotesk",
+            "density": "balanced",
+            "templateStyle": "classic"
+          },
+          "title": "Соберите сайт быстрее",
+          "subtitle": "Contract subtitle",
+          "buttonText": "Начать",
+          "buttonHref": "#lead-form",
+          "media": {
+            "src": "./images/landing/office-studio.webp",
+            "alt": "Рабочая зона",
+            "focalPoint": {
+              "x": 50,
+              "y": 50
+            }
+          },
+          "styles": {
+            "backgroundColor": "#f5f7fb",
+            "textColor": "#111827",
+            "minHeight": "520px",
+            "alignment": "center"
+          }
+        },
+        {
+          "id": "hero-56",
+          "anchor": "hero-56",
+          "type": "hero",
+          "appearance": {},
+          "hidden": false,
+          "design": {
+            "accentColor": "teal",
+            "fontPairing": "grotesk",
+            "density": "balanced",
+            "templateStyle": "classic"
+          },
+          "title": "Соберите сайт быстрее",
+          "subtitle": "Contract subtitle",
+          "buttonText": "Начать",
+          "buttonHref": "#lead-form",
+          "media": {
+            "src": "./images/landing/office-studio.webp",
+            "alt": "Рабочая зона",
+            "focalPoint": {
+              "x": 50,
+              "y": 50
+            }
+          },
+          "styles": {
+            "backgroundColor": "#f5f7fb",
+            "textColor": "#111827",
+            "minHeight": "520px",
+            "alignment": "center"
+          }
+        },
+        {
+          "id": "hero-57",
+          "anchor": "hero-57",
+          "type": "hero",
+          "appearance": {},
+          "hidden": false,
+          "design": {
+            "accentColor": "teal",
+            "fontPairing": "grotesk",
+            "density": "balanced",
+            "templateStyle": "classic"
+          },
+          "title": "Соберите сайт быстрее",
+          "subtitle": "Contract subtitle",
+          "buttonText": "Начать",
+          "buttonHref": "#lead-form",
+          "media": {
+            "src": "./images/landing/office-studio.webp",
+            "alt": "Рабочая зона",
+            "focalPoint": {
+              "x": 50,
+              "y": 50
+            }
+          },
+          "styles": {
+            "backgroundColor": "#f5f7fb",
+            "textColor": "#111827",
+            "minHeight": "520px",
+            "alignment": "center"
+          }
+        },
+        {
+          "id": "hero-58",
+          "anchor": "hero-58",
+          "type": "hero",
+          "appearance": {},
+          "hidden": false,
+          "design": {
+            "accentColor": "teal",
+            "fontPairing": "grotesk",
+            "density": "balanced",
+            "templateStyle": "classic"
+          },
+          "title": "Соберите сайт быстрее",
+          "subtitle": "Contract subtitle",
+          "buttonText": "Начать",
+          "buttonHref": "#lead-form",
+          "media": {
+            "src": "./images/landing/office-studio.webp",
+            "alt": "Рабочая зона",
+            "focalPoint": {
+              "x": 50,
+              "y": 50
+            }
+          },
+          "styles": {
+            "backgroundColor": "#f5f7fb",
+            "textColor": "#111827",
+            "minHeight": "520px",
+            "alignment": "center"
+          }
+        },
+        {
+          "id": "hero-59",
+          "anchor": "hero-59",
+          "type": "hero",
+          "appearance": {},
+          "hidden": false,
+          "design": {
+            "accentColor": "teal",
+            "fontPairing": "grotesk",
+            "density": "balanced",
+            "templateStyle": "classic"
+          },
+          "title": "Соберите сайт быстрее",
+          "subtitle": "Contract subtitle",
+          "buttonText": "Начать",
+          "buttonHref": "#lead-form",
+          "media": {
+            "src": "./images/landing/office-studio.webp",
+            "alt": "Рабочая зона",
+            "focalPoint": {
+              "x": 50,
+              "y": 50
+            }
+          },
+          "styles": {
+            "backgroundColor": "#f5f7fb",
+            "textColor": "#111827",
+            "minHeight": "520px",
+            "alignment": "center"
+          }
+        },
+        {
+          "id": "hero-60",
+          "anchor": "hero-60",
+          "type": "hero",
+          "appearance": {},
+          "hidden": false,
+          "design": {
+            "accentColor": "teal",
+            "fontPairing": "grotesk",
+            "density": "balanced",
+            "templateStyle": "classic"
+          },
+          "title": "Соберите сайт быстрее",
+          "subtitle": "Contract subtitle",
+          "buttonText": "Начать",
+          "buttonHref": "#lead-form",
+          "media": {
+            "src": "./images/landing/office-studio.webp",
+            "alt": "Рабочая зона",
+            "focalPoint": {
+              "x": 50,
+              "y": 50
+            }
+          },
+          "styles": {
+            "backgroundColor": "#f5f7fb",
+            "textColor": "#111827",
+            "minHeight": "520px",
+            "alignment": "center"
+          }
+        },
+        {
+          "id": "hero-61",
+          "anchor": "hero-61",
+          "type": "hero",
+          "appearance": {},
+          "hidden": false,
+          "design": {
+            "accentColor": "teal",
+            "fontPairing": "grotesk",
+            "density": "balanced",
+            "templateStyle": "classic"
+          },
+          "title": "Соберите сайт быстрее",
+          "subtitle": "Contract subtitle",
+          "buttonText": "Начать",
+          "buttonHref": "#lead-form",
+          "media": {
+            "src": "./images/landing/office-studio.webp",
+            "alt": "Рабочая зона",
+            "focalPoint": {
+              "x": 50,
+              "y": 50
+            }
+          },
+          "styles": {
+            "backgroundColor": "#f5f7fb",
+            "textColor": "#111827",
+            "minHeight": "520px",
+            "alignment": "center"
+          }
+        },
+        {
+          "id": "hero-62",
+          "anchor": "hero-62",
+          "type": "hero",
+          "appearance": {},
+          "hidden": false,
+          "design": {
+            "accentColor": "teal",
+            "fontPairing": "grotesk",
+            "density": "balanced",
+            "templateStyle": "classic"
+          },
+          "title": "Соберите сайт быстрее",
+          "subtitle": "Contract subtitle",
+          "buttonText": "Начать",
+          "buttonHref": "#lead-form",
+          "media": {
+            "src": "./images/landing/office-studio.webp",
+            "alt": "Рабочая зона",
+            "focalPoint": {
+              "x": 50,
+              "y": 50
+            }
+          },
+          "styles": {
+            "backgroundColor": "#f5f7fb",
+            "textColor": "#111827",
+            "minHeight": "520px",
+            "alignment": "center"
+          }
+        },
+        {
+          "id": "hero-63",
+          "anchor": "hero-63",
+          "type": "hero",
+          "appearance": {},
+          "hidden": false,
+          "design": {
+            "accentColor": "teal",
+            "fontPairing": "grotesk",
+            "density": "balanced",
+            "templateStyle": "classic"
+          },
+          "title": "Соберите сайт быстрее",
+          "subtitle": "Contract subtitle",
+          "buttonText": "Начать",
+          "buttonHref": "#lead-form",
+          "media": {
+            "src": "./images/landing/office-studio.webp",
+            "alt": "Рабочая зона",
+            "focalPoint": {
+              "x": 50,
+              "y": 50
+            }
+          },
+          "styles": {
+            "backgroundColor": "#f5f7fb",
+            "textColor": "#111827",
+            "minHeight": "520px",
+            "alignment": "center"
+          }
+        },
+        {
+          "id": "hero-64",
+          "anchor": "hero-64",
+          "type": "hero",
+          "appearance": {},
+          "hidden": false,
+          "design": {
+            "accentColor": "teal",
+            "fontPairing": "grotesk",
+            "density": "balanced",
+            "templateStyle": "classic"
+          },
+          "title": "Соберите сайт быстрее",
+          "subtitle": "Contract subtitle",
+          "buttonText": "Начать",
+          "buttonHref": "#lead-form",
+          "media": {
+            "src": "./images/landing/office-studio.webp",
+            "alt": "Рабочая зона",
+            "focalPoint": {
+              "x": 50,
+              "y": 50
+            }
+          },
+          "styles": {
+            "backgroundColor": "#f5f7fb",
+            "textColor": "#111827",
+            "minHeight": "520px",
+            "alignment": "center"
+          }
+        },
+        {
+          "id": "hero-65",
+          "anchor": "hero-65",
+          "type": "hero",
+          "appearance": {},
+          "hidden": false,
+          "design": {
+            "accentColor": "teal",
+            "fontPairing": "grotesk",
+            "density": "balanced",
+            "templateStyle": "classic"
+          },
+          "title": "Соберите сайт быстрее",
+          "subtitle": "Contract subtitle",
+          "buttonText": "Начать",
+          "buttonHref": "#lead-form",
+          "media": {
+            "src": "./images/landing/office-studio.webp",
+            "alt": "Рабочая зона",
+            "focalPoint": {
+              "x": 50,
+              "y": 50
+            }
+          },
+          "styles": {
+            "backgroundColor": "#f5f7fb",
+            "textColor": "#111827",
+            "minHeight": "520px",
+            "alignment": "center"
+          }
+        },
+        {
+          "id": "hero-66",
+          "anchor": "hero-66",
+          "type": "hero",
+          "appearance": {},
+          "hidden": false,
+          "design": {
+            "accentColor": "teal",
+            "fontPairing": "grotesk",
+            "density": "balanced",
+            "templateStyle": "classic"
+          },
+          "title": "Соберите сайт быстрее",
+          "subtitle": "Contract subtitle",
+          "buttonText": "Начать",
+          "buttonHref": "#lead-form",
+          "media": {
+            "src": "./images/landing/office-studio.webp",
+            "alt": "Рабочая зона",
+            "focalPoint": {
+              "x": 50,
+              "y": 50
+            }
+          },
+          "styles": {
+            "backgroundColor": "#f5f7fb",
+            "textColor": "#111827",
+            "minHeight": "520px",
+            "alignment": "center"
+          }
+        },
+        {
+          "id": "hero-67",
+          "anchor": "hero-67",
+          "type": "hero",
+          "appearance": {},
+          "hidden": false,
+          "design": {
+            "accentColor": "teal",
+            "fontPairing": "grotesk",
+            "density": "balanced",
+            "templateStyle": "classic"
+          },
+          "title": "Соберите сайт быстрее",
+          "subtitle": "Contract subtitle",
+          "buttonText": "Начать",
+          "buttonHref": "#lead-form",
+          "media": {
+            "src": "./images/landing/office-studio.webp",
+            "alt": "Рабочая зона",
+            "focalPoint": {
+              "x": 50,
+              "y": 50
+            }
+          },
+          "styles": {
+            "backgroundColor": "#f5f7fb",
+            "textColor": "#111827",
+            "minHeight": "520px",
+            "alignment": "center"
+          }
+        },
+        {
+          "id": "hero-68",
+          "anchor": "hero-68",
+          "type": "hero",
+          "appearance": {},
+          "hidden": false,
+          "design": {
+            "accentColor": "teal",
+            "fontPairing": "grotesk",
+            "density": "balanced",
+            "templateStyle": "classic"
+          },
+          "title": "Соберите сайт быстрее",
+          "subtitle": "Contract subtitle",
+          "buttonText": "Начать",
+          "buttonHref": "#lead-form",
+          "media": {
+            "src": "./images/landing/office-studio.webp",
+            "alt": "Рабочая зона",
+            "focalPoint": {
+              "x": 50,
+              "y": 50
+            }
+          },
+          "styles": {
+            "backgroundColor": "#f5f7fb",
+            "textColor": "#111827",
+            "minHeight": "520px",
+            "alignment": "center"
+          }
+        },
+        {
+          "id": "hero-69",
+          "anchor": "hero-69",
+          "type": "hero",
+          "appearance": {},
+          "hidden": false,
+          "design": {
+            "accentColor": "teal",
+            "fontPairing": "grotesk",
+            "density": "balanced",
+            "templateStyle": "classic"
+          },
+          "title": "Соберите сайт быстрее",
+          "subtitle": "Contract subtitle",
+          "buttonText": "Начать",
+          "buttonHref": "#lead-form",
+          "media": {
+            "src": "./images/landing/office-studio.webp",
+            "alt": "Рабочая зона",
+            "focalPoint": {
+              "x": 50,
+              "y": 50
+            }
+          },
+          "styles": {
+            "backgroundColor": "#f5f7fb",
+            "textColor": "#111827",
+            "minHeight": "520px",
+            "alignment": "center"
+          }
+        },
+        {
+          "id": "hero-70",
+          "anchor": "hero-70",
+          "type": "hero",
+          "appearance": {},
+          "hidden": false,
+          "design": {
+            "accentColor": "teal",
+            "fontPairing": "grotesk",
+            "density": "balanced",
+            "templateStyle": "classic"
+          },
+          "title": "Соберите сайт быстрее",
+          "subtitle": "Contract subtitle",
+          "buttonText": "Начать",
+          "buttonHref": "#lead-form",
+          "media": {
+            "src": "./images/landing/office-studio.webp",
+            "alt": "Рабочая зона",
+            "focalPoint": {
+              "x": 50,
+              "y": 50
+            }
+          },
+          "styles": {
+            "backgroundColor": "#f5f7fb",
+            "textColor": "#111827",
+            "minHeight": "520px",
+            "alignment": "center"
+          }
+        },
+        {
+          "id": "hero-71",
+          "anchor": "hero-71",
+          "type": "hero",
+          "appearance": {},
+          "hidden": false,
+          "design": {
+            "accentColor": "teal",
+            "fontPairing": "grotesk",
+            "density": "balanced",
+            "templateStyle": "classic"
+          },
+          "title": "Соберите сайт быстрее",
+          "subtitle": "Contract subtitle",
+          "buttonText": "Начать",
+          "buttonHref": "#lead-form",
+          "media": {
+            "src": "./images/landing/office-studio.webp",
+            "alt": "Рабочая зона",
+            "focalPoint": {
+              "x": 50,
+              "y": 50
+            }
+          },
+          "styles": {
+            "backgroundColor": "#f5f7fb",
+            "textColor": "#111827",
+            "minHeight": "520px",
+            "alignment": "center"
+          }
+        },
+        {
+          "id": "hero-72",
+          "anchor": "hero-72",
+          "type": "hero",
+          "appearance": {},
+          "hidden": false,
+          "design": {
+            "accentColor": "teal",
+            "fontPairing": "grotesk",
+            "density": "balanced",
+            "templateStyle": "classic"
+          },
+          "title": "Соберите сайт быстрее",
+          "subtitle": "Contract subtitle",
+          "buttonText": "Начать",
+          "buttonHref": "#lead-form",
+          "media": {
+            "src": "./images/landing/office-studio.webp",
+            "alt": "Рабочая зона",
+            "focalPoint": {
+              "x": 50,
+              "y": 50
+            }
+          },
+          "styles": {
+            "backgroundColor": "#f5f7fb",
+            "textColor": "#111827",
+            "minHeight": "520px",
+            "alignment": "center"
+          }
+        },
+        {
+          "id": "hero-73",
+          "anchor": "hero-73",
+          "type": "hero",
+          "appearance": {},
+          "hidden": false,
+          "design": {
+            "accentColor": "teal",
+            "fontPairing": "grotesk",
+            "density": "balanced",
+            "templateStyle": "classic"
+          },
+          "title": "Соберите сайт быстрее",
+          "subtitle": "Contract subtitle",
+          "buttonText": "Начать",
+          "buttonHref": "#lead-form",
+          "media": {
+            "src": "./images/landing/office-studio.webp",
+            "alt": "Рабочая зона",
+            "focalPoint": {
+              "x": 50,
+              "y": 50
+            }
+          },
+          "styles": {
+            "backgroundColor": "#f5f7fb",
+            "textColor": "#111827",
+            "minHeight": "520px",
+            "alignment": "center"
+          }
+        },
+        {
+          "id": "hero-74",
+          "anchor": "hero-74",
+          "type": "hero",
+          "appearance": {},
+          "hidden": false,
+          "design": {
+            "accentColor": "teal",
+            "fontPairing": "grotesk",
+            "density": "balanced",
+            "templateStyle": "classic"
+          },
+          "title": "Соберите сайт быстрее",
+          "subtitle": "Contract subtitle",
+          "buttonText": "Начать",
+          "buttonHref": "#lead-form",
+          "media": {
+            "src": "./images/landing/office-studio.webp",
+            "alt": "Рабочая зона",
+            "focalPoint": {
+              "x": 50,
+              "y": 50
+            }
+          },
+          "styles": {
+            "backgroundColor": "#f5f7fb",
+            "textColor": "#111827",
+            "minHeight": "520px",
+            "alignment": "center"
+          }
+        },
+        {
+          "id": "hero-75",
+          "anchor": "hero-75",
+          "type": "hero",
+          "appearance": {},
+          "hidden": false,
+          "design": {
+            "accentColor": "teal",
+            "fontPairing": "grotesk",
+            "density": "balanced",
+            "templateStyle": "classic"
+          },
+          "title": "Соберите сайт быстрее",
+          "subtitle": "Contract subtitle",
+          "buttonText": "Начать",
+          "buttonHref": "#lead-form",
+          "media": {
+            "src": "./images/landing/office-studio.webp",
+            "alt": "Рабочая зона",
+            "focalPoint": {
+              "x": 50,
+              "y": 50
+            }
+          },
+          "styles": {
+            "backgroundColor": "#f5f7fb",
+            "textColor": "#111827",
+            "minHeight": "520px",
+            "alignment": "center"
+          }
+        },
+        {
+          "id": "hero-76",
+          "anchor": "hero-76",
+          "type": "hero",
+          "appearance": {},
+          "hidden": false,
+          "design": {
+            "accentColor": "teal",
+            "fontPairing": "grotesk",
+            "density": "balanced",
+            "templateStyle": "classic"
+          },
+          "title": "Соберите сайт быстрее",
+          "subtitle": "Contract subtitle",
+          "buttonText": "Начать",
+          "buttonHref": "#lead-form",
+          "media": {
+            "src": "./images/landing/office-studio.webp",
+            "alt": "Рабочая зона",
+            "focalPoint": {
+              "x": 50,
+              "y": 50
+            }
+          },
+          "styles": {
+            "backgroundColor": "#f5f7fb",
+            "textColor": "#111827",
+            "minHeight": "520px",
+            "alignment": "center"
+          }
+        },
+        {
+          "id": "hero-77",
+          "anchor": "hero-77",
+          "type": "hero",
+          "appearance": {},
+          "hidden": false,
+          "design": {
+            "accentColor": "teal",
+            "fontPairing": "grotesk",
+            "density": "balanced",
+            "templateStyle": "classic"
+          },
+          "title": "Соберите сайт быстрее",
+          "subtitle": "Contract subtitle",
+          "buttonText": "Начать",
+          "buttonHref": "#lead-form",
+          "media": {
+            "src": "./images/landing/office-studio.webp",
+            "alt": "Рабочая зона",
+            "focalPoint": {
+              "x": 50,
+              "y": 50
+            }
+          },
+          "styles": {
+            "backgroundColor": "#f5f7fb",
+            "textColor": "#111827",
+            "minHeight": "520px",
+            "alignment": "center"
+          }
+        },
+        {
+          "id": "hero-78",
+          "anchor": "hero-78",
+          "type": "hero",
+          "appearance": {},
+          "hidden": false,
+          "design": {
+            "accentColor": "teal",
+            "fontPairing": "grotesk",
+            "density": "balanced",
+            "templateStyle": "classic"
+          },
+          "title": "Соберите сайт быстрее",
+          "subtitle": "Contract subtitle",
+          "buttonText": "Начать",
+          "buttonHref": "#lead-form",
+          "media": {
+            "src": "./images/landing/office-studio.webp",
+            "alt": "Рабочая зона",
+            "focalPoint": {
+              "x": 50,
+              "y": 50
+            }
+          },
+          "styles": {
+            "backgroundColor": "#f5f7fb",
+            "textColor": "#111827",
+            "minHeight": "520px",
+            "alignment": "center"
+          }
+        },
+        {
+          "id": "hero-79",
+          "anchor": "hero-79",
+          "type": "hero",
+          "appearance": {},
+          "hidden": false,
+          "design": {
+            "accentColor": "teal",
+            "fontPairing": "grotesk",
+            "density": "balanced",
+            "templateStyle": "classic"
+          },
+          "title": "Соберите сайт быстрее",
+          "subtitle": "Contract subtitle",
+          "buttonText": "Начать",
+          "buttonHref": "#lead-form",
+          "media": {
+            "src": "./images/landing/office-studio.webp",
+            "alt": "Рабочая зона",
+            "focalPoint": {
+              "x": 50,
+              "y": 50
+            }
+          },
+          "styles": {
+            "backgroundColor": "#f5f7fb",
+            "textColor": "#111827",
+            "minHeight": "520px",
+            "alignment": "center"
+          }
+        },
+        {
+          "id": "hero-80",
+          "anchor": "hero-80",
+          "type": "hero",
+          "appearance": {},
+          "hidden": false,
+          "design": {
+            "accentColor": "teal",
+            "fontPairing": "grotesk",
+            "density": "balanced",
+            "templateStyle": "classic"
+          },
+          "title": "Соберите сайт быстрее",
+          "subtitle": "Contract subtitle",
+          "buttonText": "Начать",
+          "buttonHref": "#lead-form",
+          "media": {
+            "src": "./images/landing/office-studio.webp",
+            "alt": "Рабочая зона",
+            "focalPoint": {
+              "x": 50,
+              "y": 50
+            }
+          },
+          "styles": {
+            "backgroundColor": "#f5f7fb",
+            "textColor": "#111827",
+            "minHeight": "520px",
+            "alignment": "center"
+          }
+        },
+        {
+          "id": "hero-81",
+          "anchor": "hero-81",
+          "type": "hero",
+          "appearance": {},
+          "hidden": false,
+          "design": {
+            "accentColor": "teal",
+            "fontPairing": "grotesk",
+            "density": "balanced",
+            "templateStyle": "classic"
+          },
+          "title": "Соберите сайт быстрее",
+          "subtitle": "Contract subtitle",
+          "buttonText": "Начать",
+          "buttonHref": "#lead-form",
+          "media": {
+            "src": "./images/landing/office-studio.webp",
+            "alt": "Рабочая зона",
+            "focalPoint": {
+              "x": 50,
+              "y": 50
+            }
+          },
+          "styles": {
+            "backgroundColor": "#f5f7fb",
+            "textColor": "#111827",
+            "minHeight": "520px",
+            "alignment": "center"
+          }
+        },
+        {
+          "id": "hero-82",
+          "anchor": "hero-82",
+          "type": "hero",
+          "appearance": {},
+          "hidden": false,
+          "design": {
+            "accentColor": "teal",
+            "fontPairing": "grotesk",
+            "density": "balanced",
+            "templateStyle": "classic"
+          },
+          "title": "Соберите сайт быстрее",
+          "subtitle": "Contract subtitle",
+          "buttonText": "Начать",
+          "buttonHref": "#lead-form",
+          "media": {
+            "src": "./images/landing/office-studio.webp",
+            "alt": "Рабочая зона",
+            "focalPoint": {
+              "x": 50,
+              "y": 50
+            }
+          },
+          "styles": {
+            "backgroundColor": "#f5f7fb",
+            "textColor": "#111827",
+            "minHeight": "520px",
+            "alignment": "center"
+          }
+        },
+        {
+          "id": "hero-83",
+          "anchor": "hero-83",
+          "type": "hero",
+          "appearance": {},
+          "hidden": false,
+          "design": {
+            "accentColor": "teal",
+            "fontPairing": "grotesk",
+            "density": "balanced",
+            "templateStyle": "classic"
+          },
+          "title": "Соберите сайт быстрее",
+          "subtitle": "Contract subtitle",
+          "buttonText": "Начать",
+          "buttonHref": "#lead-form",
+          "media": {
+            "src": "./images/landing/office-studio.webp",
+            "alt": "Рабочая зона",
+            "focalPoint": {
+              "x": 50,
+              "y": 50
+            }
+          },
+          "styles": {
+            "backgroundColor": "#f5f7fb",
+            "textColor": "#111827",
+            "minHeight": "520px",
+            "alignment": "center"
+          }
+        },
+        {
+          "id": "hero-84",
+          "anchor": "hero-84",
+          "type": "hero",
+          "appearance": {},
+          "hidden": false,
+          "design": {
+            "accentColor": "teal",
+            "fontPairing": "grotesk",
+            "density": "balanced",
+            "templateStyle": "classic"
+          },
+          "title": "Соберите сайт быстрее",
+          "subtitle": "Contract subtitle",
+          "buttonText": "Начать",
+          "buttonHref": "#lead-form",
+          "media": {
+            "src": "./images/landing/office-studio.webp",
+            "alt": "Рабочая зона",
+            "focalPoint": {
+              "x": 50,
+              "y": 50
+            }
+          },
+          "styles": {
+            "backgroundColor": "#f5f7fb",
+            "textColor": "#111827",
+            "minHeight": "520px",
+            "alignment": "center"
+          }
+        },
+        {
+          "id": "hero-85",
+          "anchor": "hero-85",
+          "type": "hero",
+          "appearance": {},
+          "hidden": false,
+          "design": {
+            "accentColor": "teal",
+            "fontPairing": "grotesk",
+            "density": "balanced",
+            "templateStyle": "classic"
+          },
+          "title": "Соберите сайт быстрее",
+          "subtitle": "Contract subtitle",
+          "buttonText": "Начать",
+          "buttonHref": "#lead-form",
+          "media": {
+            "src": "./images/landing/office-studio.webp",
+            "alt": "Рабочая зона",
+            "focalPoint": {
+              "x": 50,
+              "y": 50
+            }
+          },
+          "styles": {
+            "backgroundColor": "#f5f7fb",
+            "textColor": "#111827",
+            "minHeight": "520px",
+            "alignment": "center"
+          }
+        },
+        {
+          "id": "hero-86",
+          "anchor": "hero-86",
+          "type": "hero",
+          "appearance": {},
+          "hidden": false,
+          "design": {
+            "accentColor": "teal",
+            "fontPairing": "grotesk",
+            "density": "balanced",
+            "templateStyle": "classic"
+          },
+          "title": "Соберите сайт быстрее",
+          "subtitle": "Contract subtitle",
+          "buttonText": "Начать",
+          "buttonHref": "#lead-form",
+          "media": {
+            "src": "./images/landing/office-studio.webp",
+            "alt": "Рабочая зона",
+            "focalPoint": {
+              "x": 50,
+              "y": 50
+            }
+          },
+          "styles": {
+            "backgroundColor": "#f5f7fb",
+            "textColor": "#111827",
+            "minHeight": "520px",
+            "alignment": "center"
+          }
+        },
+        {
+          "id": "hero-87",
+          "anchor": "hero-87",
+          "type": "hero",
+          "appearance": {},
+          "hidden": false,
+          "design": {
+            "accentColor": "teal",
+            "fontPairing": "grotesk",
+            "density": "balanced",
+            "templateStyle": "classic"
+          },
+          "title": "Соберите сайт быстрее",
+          "subtitle": "Contract subtitle",
+          "buttonText": "Начать",
+          "buttonHref": "#lead-form",
+          "media": {
+            "src": "./images/landing/office-studio.webp",
+            "alt": "Рабочая зона",
+            "focalPoint": {
+              "x": 50,
+              "y": 50
+            }
+          },
+          "styles": {
+            "backgroundColor": "#f5f7fb",
+            "textColor": "#111827",
+            "minHeight": "520px",
+            "alignment": "center"
+          }
+        },
+        {
+          "id": "hero-88",
+          "anchor": "hero-88",
+          "type": "hero",
+          "appearance": {},
+          "hidden": false,
+          "design": {
+            "accentColor": "teal",
+            "fontPairing": "grotesk",
+            "density": "balanced",
+            "templateStyle": "classic"
+          },
+          "title": "Соберите сайт быстрее",
+          "subtitle": "Contract subtitle",
+          "buttonText": "Начать",
+          "buttonHref": "#lead-form",
+          "media": {
+            "src": "./images/landing/office-studio.webp",
+            "alt": "Рабочая зона",
+            "focalPoint": {
+              "x": 50,
+              "y": 50
+            }
+          },
+          "styles": {
+            "backgroundColor": "#f5f7fb",
+            "textColor": "#111827",
+            "minHeight": "520px",
+            "alignment": "center"
+          }
+        },
+        {
+          "id": "hero-89",
+          "anchor": "hero-89",
+          "type": "hero",
+          "appearance": {},
+          "hidden": false,
+          "design": {
+            "accentColor": "teal",
+            "fontPairing": "grotesk",
+            "density": "balanced",
+            "templateStyle": "classic"
+          },
+          "title": "Соберите сайт быстрее",
+          "subtitle": "Contract subtitle",
+          "buttonText": "Начать",
+          "buttonHref": "#lead-form",
+          "media": {
+            "src": "./images/landing/office-studio.webp",
+            "alt": "Рабочая зона",
+            "focalPoint": {
+              "x": 50,
+              "y": 50
+            }
+          },
+          "styles": {
+            "backgroundColor": "#f5f7fb",
+            "textColor": "#111827",
+            "minHeight": "520px",
+            "alignment": "center"
+          }
+        },
+        {
+          "id": "hero-90",
+          "anchor": "hero-90",
+          "type": "hero",
+          "appearance": {},
+          "hidden": false,
+          "design": {
+            "accentColor": "teal",
+            "fontPairing": "grotesk",
+            "density": "balanced",
+            "templateStyle": "classic"
+          },
+          "title": "Соберите сайт быстрее",
+          "subtitle": "Contract subtitle",
+          "buttonText": "Начать",
+          "buttonHref": "#lead-form",
+          "media": {
+            "src": "./images/landing/office-studio.webp",
+            "alt": "Рабочая зона",
+            "focalPoint": {
+              "x": 50,
+              "y": 50
+            }
+          },
+          "styles": {
+            "backgroundColor": "#f5f7fb",
+            "textColor": "#111827",
+            "minHeight": "520px",
+            "alignment": "center"
+          }
+        },
+        {
+          "id": "hero-91",
+          "anchor": "hero-91",
+          "type": "hero",
+          "appearance": {},
+          "hidden": false,
+          "design": {
+            "accentColor": "teal",
+            "fontPairing": "grotesk",
+            "density": "balanced",
+            "templateStyle": "classic"
+          },
+          "title": "Соберите сайт быстрее",
+          "subtitle": "Contract subtitle",
+          "buttonText": "Начать",
+          "buttonHref": "#lead-form",
+          "media": {
+            "src": "./images/landing/office-studio.webp",
+            "alt": "Рабочая зона",
+            "focalPoint": {
+              "x": 50,
+              "y": 50
+            }
+          },
+          "styles": {
+            "backgroundColor": "#f5f7fb",
+            "textColor": "#111827",
+            "minHeight": "520px",
+            "alignment": "center"
+          }
+        },
+        {
+          "id": "hero-92",
+          "anchor": "hero-92",
+          "type": "hero",
+          "appearance": {},
+          "hidden": false,
+          "design": {
+            "accentColor": "teal",
+            "fontPairing": "grotesk",
+            "density": "balanced",
+            "templateStyle": "classic"
+          },
+          "title": "Соберите сайт быстрее",
+          "subtitle": "Contract subtitle",
+          "buttonText": "Начать",
+          "buttonHref": "#lead-form",
+          "media": {
+            "src": "./images/landing/office-studio.webp",
+            "alt": "Рабочая зона",
+            "focalPoint": {
+              "x": 50,
+              "y": 50
+            }
+          },
+          "styles": {
+            "backgroundColor": "#f5f7fb",
+            "textColor": "#111827",
+            "minHeight": "520px",
+            "alignment": "center"
+          }
+        },
+        {
+          "id": "hero-93",
+          "anchor": "hero-93",
+          "type": "hero",
+          "appearance": {},
+          "hidden": false,
+          "design": {
+            "accentColor": "teal",
+            "fontPairing": "grotesk",
+            "density": "balanced",
+            "templateStyle": "classic"
+          },
+          "title": "Соберите сайт быстрее",
+          "subtitle": "Contract subtitle",
+          "buttonText": "Начать",
+          "buttonHref": "#lead-form",
+          "media": {
+            "src": "./images/landing/office-studio.webp",
+            "alt": "Рабочая зона",
+            "focalPoint": {
+              "x": 50,
+              "y": 50
+            }
+          },
+          "styles": {
+            "backgroundColor": "#f5f7fb",
+            "textColor": "#111827",
+            "minHeight": "520px",
+            "alignment": "center"
+          }
+        },
+        {
+          "id": "hero-94",
+          "anchor": "hero-94",
+          "type": "hero",
+          "appearance": {},
+          "hidden": false,
+          "design": {
+            "accentColor": "teal",
+            "fontPairing": "grotesk",
+            "density": "balanced",
+            "templateStyle": "classic"
+          },
+          "title": "Соберите сайт быстрее",
+          "subtitle": "Contract subtitle",
+          "buttonText": "Начать",
+          "buttonHref": "#lead-form",
+          "media": {
+            "src": "./images/landing/office-studio.webp",
+            "alt": "Рабочая зона",
+            "focalPoint": {
+              "x": 50,
+              "y": 50
+            }
+          },
+          "styles": {
+            "backgroundColor": "#f5f7fb",
+            "textColor": "#111827",
+            "minHeight": "520px",
+            "alignment": "center"
+          }
+        },
+        {
+          "id": "hero-95",
+          "anchor": "hero-95",
+          "type": "hero",
+          "appearance": {},
+          "hidden": false,
+          "design": {
+            "accentColor": "teal",
+            "fontPairing": "grotesk",
+            "density": "balanced",
+            "templateStyle": "classic"
+          },
+          "title": "Соберите сайт быстрее",
+          "subtitle": "Contract subtitle",
+          "buttonText": "Начать",
+          "buttonHref": "#lead-form",
+          "media": {
+            "src": "./images/landing/office-studio.webp",
+            "alt": "Рабочая зона",
+            "focalPoint": {
+              "x": 50,
+              "y": 50
+            }
+          },
+          "styles": {
+            "backgroundColor": "#f5f7fb",
+            "textColor": "#111827",
+            "minHeight": "520px",
+            "alignment": "center"
+          }
+        },
+        {
+          "id": "hero-96",
+          "anchor": "hero-96",
+          "type": "hero",
+          "appearance": {},
+          "hidden": false,
+          "design": {
+            "accentColor": "teal",
+            "fontPairing": "grotesk",
+            "density": "balanced",
+            "templateStyle": "classic"
+          },
+          "title": "Соберите сайт быстрее",
+          "subtitle": "Contract subtitle",
+          "buttonText": "Начать",
+          "buttonHref": "#lead-form",
+          "media": {
+            "src": "./images/landing/office-studio.webp",
+            "alt": "Рабочая зона",
+            "focalPoint": {
+              "x": 50,
+              "y": 50
+            }
+          },
+          "styles": {
+            "backgroundColor": "#f5f7fb",
+            "textColor": "#111827",
+            "minHeight": "520px",
+            "alignment": "center"
+          }
+        },
+        {
+          "id": "hero-97",
+          "anchor": "hero-97",
+          "type": "hero",
+          "appearance": {},
+          "hidden": false,
+          "design": {
+            "accentColor": "teal",
+            "fontPairing": "grotesk",
+            "density": "balanced",
+            "templateStyle": "classic"
+          },
+          "title": "Соберите сайт быстрее",
+          "subtitle": "Contract subtitle",
+          "buttonText": "Начать",
+          "buttonHref": "#lead-form",
+          "media": {
+            "src": "./images/landing/office-studio.webp",
+            "alt": "Рабочая зона",
+            "focalPoint": {
+              "x": 50,
+              "y": 50
+            }
+          },
+          "styles": {
+            "backgroundColor": "#f5f7fb",
+            "textColor": "#111827",
+            "minHeight": "520px",
+            "alignment": "center"
+          }
+        },
+        {
+          "id": "hero-98",
+          "anchor": "hero-98",
+          "type": "hero",
+          "appearance": {},
+          "hidden": false,
+          "design": {
+            "accentColor": "teal",
+            "fontPairing": "grotesk",
+            "density": "balanced",
+            "templateStyle": "classic"
+          },
+          "title": "Соберите сайт быстрее",
+          "subtitle": "Contract subtitle",
+          "buttonText": "Начать",
+          "buttonHref": "#lead-form",
+          "media": {
+            "src": "./images/landing/office-studio.webp",
+            "alt": "Рабочая зона",
+            "focalPoint": {
+              "x": 50,
+              "y": 50
+            }
+          },
+          "styles": {
+            "backgroundColor": "#f5f7fb",
+            "textColor": "#111827",
+            "minHeight": "520px",
+            "alignment": "center"
+          }
+        },
+        {
+          "id": "hero-99",
+          "anchor": "hero-99",
+          "type": "hero",
+          "appearance": {},
+          "hidden": false,
+          "design": {
+            "accentColor": "teal",
+            "fontPairing": "grotesk",
+            "density": "balanced",
+            "templateStyle": "classic"
+          },
+          "title": "Соберите сайт быстрее",
+          "subtitle": "Contract subtitle",
+          "buttonText": "Начать",
+          "buttonHref": "#lead-form",
+          "media": {
+            "src": "./images/landing/office-studio.webp",
+            "alt": "Рабочая зона",
+            "focalPoint": {
+              "x": 50,
+              "y": 50
+            }
+          },
+          "styles": {
+            "backgroundColor": "#f5f7fb",
+            "textColor": "#111827",
+            "minHeight": "520px",
+            "alignment": "center"
+          }
+        },
+        {
+          "id": "hero-100",
+          "anchor": "hero-100",
+          "type": "hero",
+          "appearance": {},
+          "hidden": false,
+          "design": {
+            "accentColor": "teal",
+            "fontPairing": "grotesk",
+            "density": "balanced",
+            "templateStyle": "classic"
+          },
+          "title": "Соберите сайт быстрее",
+          "subtitle": "Contract subtitle",
+          "buttonText": "Начать",
+          "buttonHref": "#lead-form",
+          "media": {
+            "src": "./images/landing/office-studio.webp",
+            "alt": "Рабочая зона",
+            "focalPoint": {
+              "x": 50,
+              "y": 50
+            }
+          },
+          "styles": {
+            "backgroundColor": "#f5f7fb",
+            "textColor": "#111827",
+            "minHeight": "520px",
+            "alignment": "center"
+          }
+        }
+      ]
+    }
+  ]
+}

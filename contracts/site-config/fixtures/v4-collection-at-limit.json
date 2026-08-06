@@ -1,0 +1,800 @@
+{
+  "id": "site-contract",
+  "schemaVersion": 4,
+  "name": "M",
+  "theme": {
+    "pageBackground": "#ffffff",
+    "surfaceColor": "#f5f7fb",
+    "textColor": "#111827",
+    "mutedTextColor": "#5f6b7a",
+    "accentColor": "#0a7f72",
+    "fontPairing": "grotesk",
+    "typeScale": "balanced",
+    "contentWidth": "wide",
+    "sectionSpacing": "balanced",
+    "buttonShape": "rounded",
+    "radius": 8
+  },
+  "business": {
+    "brandName": "Nexus Studio",
+    "logo": null,
+    "phone": "+7 999 000-00-00",
+    "email": "hello@nexus.app",
+    "address": "",
+    "hours": "",
+    "messengers": [],
+    "socialLinks": []
+  },
+  "seo": {
+    "language": "ru",
+    "favicon": null
+  },
+  "chrome": {
+    "header": {
+      "id": "header-main",
+      "anchor": "header",
+      "type": "siteHeader",
+      "appearance": {},
+      "hidden": false,
+      "design": {
+        "accentColor": "teal",
+        "fontPairing": "grotesk",
+        "density": "balanced",
+        "templateStyle": "classic"
+      },
+      "inheritBusiness": true,
+      "variant": "stretchedNav",
+      "brandName": "Nexus Studio",
+      "navigationItems": [
+        {
+          "id": "nav-1",
+          "label": "Link 1",
+          "target": "#hero",
+          "kind": "anchor",
+          "openInNewTab": false
+        },
+        {
+          "id": "nav-2",
+          "label": "Link 2",
+          "target": "#hero",
+          "kind": "anchor",
+          "openInNewTab": false
+        },
+        {
+          "id": "nav-3",
+          "label": "Link 3",
+          "target": "#hero",
+          "kind": "anchor",
+          "openInNewTab": false
+        },
+        {
+          "id": "nav-4",
+          "label": "Link 4",
+          "target": "#hero",
+          "kind": "anchor",
+          "openInNewTab": false
+        },
+        {
+          "id": "nav-5",
+          "label": "Link 5",
+          "target": "#hero",
+          "kind": "anchor",
+          "openInNewTab": false
+        },
+        {
+          "id": "nav-6",
+          "label": "Link 6",
+          "target": "#hero",
+          "kind": "anchor",
+          "openInNewTab": false
+        },
+        {
+          "id": "nav-7",
+          "label": "Link 7",
+          "target": "#hero",
+          "kind": "anchor",
+          "openInNewTab": false
+        },
+        {
+          "id": "nav-8",
+          "label": "Link 8",
+          "target": "#hero",
+          "kind": "anchor",
+          "openInNewTab": false
+        },
+        {
+          "id": "nav-9",
+          "label": "Link 9",
+          "target": "#hero",
+          "kind": "anchor",
+          "openInNewTab": false
+        },
+        {
+          "id": "nav-10",
+          "label": "Link 10",
+          "target": "#hero",
+          "kind": "anchor",
+          "openInNewTab": false
+        },
+        {
+          "id": "nav-11",
+          "label": "Link 11",
+          "target": "#hero",
+          "kind": "anchor",
+          "openInNewTab": false
+        },
+        {
+          "id": "nav-12",
+          "label": "Link 12",
+          "target": "#hero",
+          "kind": "anchor",
+          "openInNewTab": false
+        },
+        {
+          "id": "nav-13",
+          "label": "Link 13",
+          "target": "#hero",
+          "kind": "anchor",
+          "openInNewTab": false
+        },
+        {
+          "id": "nav-14",
+          "label": "Link 14",
+          "target": "#hero",
+          "kind": "anchor",
+          "openInNewTab": false
+        },
+        {
+          "id": "nav-15",
+          "label": "Link 15",
+          "target": "#hero",
+          "kind": "anchor",
+          "openInNewTab": false
+        },
+        {
+          "id": "nav-16",
+          "label": "Link 16",
+          "target": "#hero",
+          "kind": "anchor",
+          "openInNewTab": false
+        },
+        {
+          "id": "nav-17",
+          "label": "Link 17",
+          "target": "#hero",
+          "kind": "anchor",
+          "openInNewTab": false
+        },
+        {
+          "id": "nav-18",
+          "label": "Link 18",
+          "target": "#hero",
+          "kind": "anchor",
+          "openInNewTab": false
+        },
+        {
+          "id": "nav-19",
+          "label": "Link 19",
+          "target": "#hero",
+          "kind": "anchor",
+          "openInNewTab": false
+        },
+        {
+          "id": "nav-20",
+          "label": "Link 20",
+          "target": "#hero",
+          "kind": "anchor",
+          "openInNewTab": false
+        },
+        {
+          "id": "nav-21",
+          "label": "Link 21",
+          "target": "#hero",
+          "kind": "anchor",
+          "openInNewTab": false
+        },
+        {
+          "id": "nav-22",
+          "label": "Link 22",
+          "target": "#hero",
+          "kind": "anchor",
+          "openInNewTab": false
+        },
+        {
+          "id": "nav-23",
+          "label": "Link 23",
+          "target": "#hero",
+          "kind": "anchor",
+          "openInNewTab": false
+        },
+        {
+          "id": "nav-24",
+          "label": "Link 24",
+          "target": "#hero",
+          "kind": "anchor",
+          "openInNewTab": false
+        },
+        {
+          "id": "nav-25",
+          "label": "Link 25",
+          "target": "#hero",
+          "kind": "anchor",
+          "openInNewTab": false
+        },
+        {
+          "id": "nav-26",
+          "label": "Link 26",
+          "target": "#hero",
+          "kind": "anchor",
+          "openInNewTab": false
+        },
+        {
+          "id": "nav-27",
+          "label": "Link 27",
+          "target": "#hero",
+          "kind": "anchor",
+          "openInNewTab": false
+        },
+        {
+          "id": "nav-28",
+          "label": "Link 28",
+          "target": "#hero",
+          "kind": "anchor",
+          "openInNewTab": false
+        },
+        {
+          "id": "nav-29",
+          "label": "Link 29",
+          "target": "#hero",
+          "kind": "anchor",
+          "openInNewTab": false
+        },
+        {
+          "id": "nav-30",
+          "label": "Link 30",
+          "target": "#hero",
+          "kind": "anchor",
+          "openInNewTab": false
+        },
+        {
+          "id": "nav-31",
+          "label": "Link 31",
+          "target": "#hero",
+          "kind": "anchor",
+          "openInNewTab": false
+        },
+        {
+          "id": "nav-32",
+          "label": "Link 32",
+          "target": "#hero",
+          "kind": "anchor",
+          "openInNewTab": false
+        },
+        {
+          "id": "nav-33",
+          "label": "Link 33",
+          "target": "#hero",
+          "kind": "anchor",
+          "openInNewTab": false
+        },
+        {
+          "id": "nav-34",
+          "label": "Link 34",
+          "target": "#hero",
+          "kind": "anchor",
+          "openInNewTab": false
+        },
+        {
+          "id": "nav-35",
+          "label": "Link 35",
+          "target": "#hero",
+          "kind": "anchor",
+          "openInNewTab": false
+        },
+        {
+          "id": "nav-36",
+          "label": "Link 36",
+          "target": "#hero",
+          "kind": "anchor",
+          "openInNewTab": false
+        },
+        {
+          "id": "nav-37",
+          "label": "Link 37",
+          "target": "#hero",
+          "kind": "anchor",
+          "openInNewTab": false
+        },
+        {
+          "id": "nav-38",
+          "label": "Link 38",
+          "target": "#hero",
+          "kind": "anchor",
+          "openInNewTab": false
+        },
+        {
+          "id": "nav-39",
+          "label": "Link 39",
+          "target": "#hero",
+          "kind": "anchor",
+          "openInNewTab": false
+        },
+        {
+          "id": "nav-40",
+          "label": "Link 40",
+          "target": "#hero",
+          "kind": "anchor",
+          "openInNewTab": false
+        },
+        {
+          "id": "nav-41",
+          "label": "Link 41",
+          "target": "#hero",
+          "kind": "anchor",
+          "openInNewTab": false
+        },
+        {
+          "id": "nav-42",
+          "label": "Link 42",
+          "target": "#hero",
+          "kind": "anchor",
+          "openInNewTab": false
+        },
+        {
+          "id": "nav-43",
+          "label": "Link 43",
+          "target": "#hero",
+          "kind": "anchor",
+          "openInNewTab": false
+        },
+        {
+          "id": "nav-44",
+          "label": "Link 44",
+          "target": "#hero",
+          "kind": "anchor",
+          "openInNewTab": false
+        },
+        {
+          "id": "nav-45",
+          "label": "Link 45",
+          "target": "#hero",
+          "kind": "anchor",
+          "openInNewTab": false
+        },
+        {
+          "id": "nav-46",
+          "label": "Link 46",
+          "target": "#hero",
+          "kind": "anchor",
+          "openInNewTab": false
+        },
+        {
+          "id": "nav-47",
+          "label": "Link 47",
+          "target": "#hero",
+          "kind": "anchor",
+          "openInNewTab": false
+        },
+        {
+          "id": "nav-48",
+          "label": "Link 48",
+          "target": "#hero",
+          "kind": "anchor",
+          "openInNewTab": false
+        },
+        {
+          "id": "nav-49",
+          "label": "Link 49",
+          "target": "#hero",
+          "kind": "anchor",
+          "openInNewTab": false
+        },
+        {
+          "id": "nav-50",
+          "label": "Link 50",
+          "target": "#hero",
+          "kind": "anchor",
+          "openInNewTab": false
+        },
+        {
+          "id": "nav-51",
+          "label": "Link 51",
+          "target": "#hero",
+          "kind": "anchor",
+          "openInNewTab": false
+        },
+        {
+          "id": "nav-52",
+          "label": "Link 52",
+          "target": "#hero",
+          "kind": "anchor",
+          "openInNewTab": false
+        },
+        {
+          "id": "nav-53",
+          "label": "Link 53",
+          "target": "#hero",
+          "kind": "anchor",
+          "openInNewTab": false
+        },
+        {
+          "id": "nav-54",
+          "label": "Link 54",
+          "target": "#hero",
+          "kind": "anchor",
+          "openInNewTab": false
+        },
+        {
+          "id": "nav-55",
+          "label": "Link 55",
+          "target": "#hero",
+          "kind": "anchor",
+          "openInNewTab": false
+        },
+        {
+          "id": "nav-56",
+          "label": "Link 56",
+          "target": "#hero",
+          "kind": "anchor",
+          "openInNewTab": false
+        },
+        {
+          "id": "nav-57",
+          "label": "Link 57",
+          "target": "#hero",
+          "kind": "anchor",
+          "openInNewTab": false
+        },
+        {
+          "id": "nav-58",
+          "label": "Link 58",
+          "target": "#hero",
+          "kind": "anchor",
+          "openInNewTab": false
+        },
+        {
+          "id": "nav-59",
+          "label": "Link 59",
+          "target": "#hero",
+          "kind": "anchor",
+          "openInNewTab": false
+        },
+        {
+          "id": "nav-60",
+          "label": "Link 60",
+          "target": "#hero",
+          "kind": "anchor",
+          "openInNewTab": false
+        },
+        {
+          "id": "nav-61",
+          "label": "Link 61",
+          "target": "#hero",
+          "kind": "anchor",
+          "openInNewTab": false
+        },
+        {
+          "id": "nav-62",
+          "label": "Link 62",
+          "target": "#hero",
+          "kind": "anchor",
+          "openInNewTab": false
+        },
+        {
+          "id": "nav-63",
+          "label": "Link 63",
+          "target": "#hero",
+          "kind": "anchor",
+          "openInNewTab": false
+        },
+        {
+          "id": "nav-64",
+          "label": "Link 64",
+          "target": "#hero",
+          "kind": "anchor",
+          "openInNewTab": false
+        },
+        {
+          "id": "nav-65",
+          "label": "Link 65",
+          "target": "#hero",
+          "kind": "anchor",
+          "openInNewTab": false
+        },
+        {
+          "id": "nav-66",
+          "label": "Link 66",
+          "target": "#hero",
+          "kind": "anchor",
+          "openInNewTab": false
+        },
+        {
+          "id": "nav-67",
+          "label": "Link 67",
+          "target": "#hero",
+          "kind": "anchor",
+          "openInNewTab": false
+        },
+        {
+          "id": "nav-68",
+          "label": "Link 68",
+          "target": "#hero",
+          "kind": "anchor",
+          "openInNewTab": false
+        },
+        {
+          "id": "nav-69",
+          "label": "Link 69",
+          "target": "#hero",
+          "kind": "anchor",
+          "openInNewTab": false
+        },
+        {
+          "id": "nav-70",
+          "label": "Link 70",
+          "target": "#hero",
+          "kind": "anchor",
+          "openInNewTab": false
+        },
+        {
+          "id": "nav-71",
+          "label": "Link 71",
+          "target": "#hero",
+          "kind": "anchor",
+          "openInNewTab": false
+        },
+        {
+          "id": "nav-72",
+          "label": "Link 72",
+          "target": "#hero",
+          "kind": "anchor",
+          "openInNewTab": false
+        },
+        {
+          "id": "nav-73",
+          "label": "Link 73",
+          "target": "#hero",
+          "kind": "anchor",
+          "openInNewTab": false
+        },
+        {
+          "id": "nav-74",
+          "label": "Link 74",
+          "target": "#hero",
+          "kind": "anchor",
+          "openInNewTab": false
+        },
+        {
+          "id": "nav-75",
+          "label": "Link 75",
+          "target": "#hero",
+          "kind": "anchor",
+          "openInNewTab": false
+        },
+        {
+          "id": "nav-76",
+          "label": "Link 76",
+          "target": "#hero",
+          "kind": "anchor",
+          "openInNewTab": false
+        },
+        {
+          "id": "nav-77",
+          "label": "Link 77",
+          "target": "#hero",
+          "kind": "anchor",
+          "openInNewTab": false
+        },
+        {
+          "id": "nav-78",
+          "label": "Link 78",
+          "target": "#hero",
+          "kind": "anchor",
+          "openInNewTab": false
+        },
+        {
+          "id": "nav-79",
+          "label": "Link 79",
+          "target": "#hero",
+          "kind": "anchor",
+          "openInNewTab": false
+        },
+        {
+          "id": "nav-80",
+          "label": "Link 80",
+          "target": "#hero",
+          "kind": "anchor",
+          "openInNewTab": false
+        },
+        {
+          "id": "nav-81",
+          "label": "Link 81",
+          "target": "#hero",
+          "kind": "anchor",
+          "openInNewTab": false
+        },
+        {
+          "id": "nav-82",
+          "label": "Link 82",
+          "target": "#hero",
+          "kind": "anchor",
+          "openInNewTab": false
+        },
+        {
+          "id": "nav-83",
+          "label": "Link 83",
+          "target": "#hero",
+          "kind": "anchor",
+          "openInNewTab": false
+        },
+        {
+          "id": "nav-84",
+          "label": "Link 84",
+          "target": "#hero",
+          "kind": "anchor",
+          "openInNewTab": false
+        },
+        {
+          "id": "nav-85",
+          "label": "Link 85",
+          "target": "#hero",
+          "kind": "anchor",
+          "openInNewTab": false
+        },
+        {
+          "id": "nav-86",
+          "label": "Link 86",
+          "target": "#hero",
+          "kind": "anchor",
+          "openInNewTab": false
+        },
+        {
+          "id": "nav-87",
+          "label": "Link 87",
+          "target": "#hero",
+          "kind": "anchor",
+          "openInNewTab": false
+        },
+        {
+          "id": "nav-88",
+          "label": "Link 88",
+          "target": "#hero",
+          "kind": "anchor",
+          "openInNewTab": false
+        },
+        {
+          "id": "nav-89",
+          "label": "Link 89",
+          "target": "#hero",
+          "kind": "anchor",
+          "openInNewTab": false
+        },
+        {
+          "id": "nav-90",
+          "label": "Link 90",
+          "target": "#hero",
+          "kind": "anchor",
+          "openInNewTab": false
+        },
+        {
+          "id": "nav-91",
+          "label": "Link 91",
+          "target": "#hero",
+          "kind": "anchor",
+          "openInNewTab": false
+        },
+        {
+          "id": "nav-92",
+          "label": "Link 92",
+          "target": "#hero",
+          "kind": "anchor",
+          "openInNewTab": false
+        },
+        {
+          "id": "nav-93",
+          "label": "Link 93",
+          "target": "#hero",
+          "kind": "anchor",
+          "openInNewTab": false
+        },
+        {
+          "id": "nav-94",
+          "label": "Link 94",
+          "target": "#hero",
+          "kind": "anchor",
+          "openInNewTab": false
+        },
+        {
+          "id": "nav-95",
+          "label": "Link 95",
+          "target": "#hero",
+          "kind": "anchor",
+          "openInNewTab": false
+        },
+        {
+          "id": "nav-96",
+          "label": "Link 96",
+          "target": "#hero",
+          "kind": "anchor",
+          "openInNewTab": false
+        },
+        {
+          "id": "nav-97",
+          "label": "Link 97",
+          "target": "#hero",
+          "kind": "anchor",
+          "openInNewTab": false
+        },
+        {
+          "id": "nav-98",
+          "label": "Link 98",
+          "target": "#hero",
+          "kind": "anchor",
+          "openInNewTab": false
+        },
+        {
+          "id": "nav-99",
+          "label": "Link 99",
+          "target": "#hero",
+          "kind": "anchor",
+          "openInNewTab": false
+        },
+        {
+          "id": "nav-100",
+          "label": "Link 100",
+          "target": "#hero",
+          "kind": "anchor",
+          "openInNewTab": false
+        }
+      ],
+      "cta": {
+        "id": "header-cta",
+        "label": "Связаться",
+        "target": "#lead-form",
+        "kind": "anchor",
+        "openInNewTab": false
+      }
+    },
+    "footer": {
+      "id": "footer-main",
+      "anchor": "contact",
+      "type": "siteFooter",
+      "appearance": {},
+      "hidden": false,
+      "design": {
+        "accentColor": "teal",
+        "fontPairing": "grotesk",
+        "density": "balanced",
+        "templateStyle": "classic"
+      },
+      "inheritBusiness": true,
+      "variant": "bookingFooter",
+      "brandName": "Nexus Studio",
+      "cta": {
+        "id": "footer-cta",
+        "label": "Оставить заявку",
+        "target": "#lead-form",
+        "kind": "anchor",
+        "openInNewTab": false
+      },
+      "contactLines": [
+        "hello@nexus.app"
+      ],
+      "links": []
+    }
+  },
+  "pages": [
+    {
+      "id": "page-minimal",
+      "slug": "minimal",
+      "title": "M",
+      "seo": {
+        "title": "M",
+        "description": "",
+        "socialImage": null,
+        "noIndex": false
+      },
+      "blocks": []
+    }
+  ]
+}

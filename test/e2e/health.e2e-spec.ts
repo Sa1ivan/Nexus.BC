@@ -21,8 +21,8 @@ const completeRuntimeEnvironment = {
   PRIVACY_NOTICE_URL: 'https://app.nexus.site/privacy',
   PRIVACY_NOTICE_VERSION: 'alpha-2026-08-04',
   LEAD_RETENTION_DAYS: '90',
-  ACCESS_TOKEN_SECRET: 'a'.repeat(32),
-  REFRESH_TOKEN_SECRET: 'b'.repeat(32),
+  ACCESS_TOKEN_SECRET: 'valid-access-token-secret-for-production-tests',
+  REFRESH_TOKEN_SECRET: 'valid-refresh-token-secret-for-production-tests',
   R2_ACCOUNT_ID: 'test-account',
   R2_ACCESS_KEY_ID: 'test-access-key',
   R2_SECRET_ACCESS_KEY: 'c'.repeat(32),
@@ -30,10 +30,15 @@ const completeRuntimeEnvironment = {
   RESEND_API_KEY: 're_test_key',
   RESEND_WEBHOOK_SIGNING_SECRET: 'whsec_test_secret',
   EMAIL_FROM: 'Nexus <noreply@nexus.site>',
-  OUTBOX_ENCRYPTION_KEY: Buffer.alloc(32, 1).toString('base64'),
+  OUTBOX_ENCRYPTION_KEY: Buffer.from(
+    '5df9f3c1ba814c52977240055f577d2a',
+    'utf8',
+  ).toString('base64'),
   IDEMPOTENCY_HMAC_ACTIVE_KEY_VERSION: '1',
   IDEMPOTENCY_HMAC_KEYRING: JSON.stringify({
-    1: Buffer.alloc(32, 2).toString('base64'),
+    1: Buffer.from('4c09b287bb9e45ccaf962952cf3cd3aa', 'utf8').toString(
+      'base64',
+    ),
   }),
   SITE_CONFIG_ROLLOUT_MODE: 'V4_COMPAT',
 } satisfies Record<string, string>;
@@ -107,6 +112,35 @@ const invalidProductionConfigurations = [
     expectedKey: 'REFRESH_TOKEN_SECRET',
   },
   {
+    label: 'public access-token placeholder from the example environment',
+    overrides: {
+      ACCESS_TOKEN_SECRET: 'replace-with-at-least-32-random-characters',
+    },
+    expectedKey: 'ACCESS_TOKEN_SECRET',
+  },
+  {
+    label: 'public refresh-token placeholder from the example environment',
+    overrides: {
+      REFRESH_TOKEN_SECRET: 'replace-with-at-least-32-random-characters',
+    },
+    expectedKey: 'REFRESH_TOKEN_SECRET',
+  },
+  {
+    label: 'public outbox key from the example environment',
+    overrides: {
+      OUTBOX_ENCRYPTION_KEY: 'AQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQE=',
+    },
+    expectedKey: 'OUTBOX_ENCRYPTION_KEY',
+  },
+  {
+    label: 'public idempotency key from the example environment',
+    overrides: {
+      IDEMPOTENCY_HMAC_KEYRING:
+        '{"1":"AgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgI="}',
+    },
+    expectedKey: 'IDEMPOTENCY_HMAC_KEYRING',
+  },
+  {
     label: 'outbox encryption key with fewer than 32 bytes',
     overrides: {
       OUTBOX_ENCRYPTION_KEY: Buffer.alloc(31, 1).toString('base64'),
@@ -164,7 +198,7 @@ async function createApplication(
     moduleFixture = await Test.createTestingModule({
       imports: [AppModule],
     }).compile();
-    app = moduleFixture.createNestApplication();
+    app = moduleFixture.createNestApplication({ bodyParser: false });
     configure?.(app);
     await app.init();
     return app;

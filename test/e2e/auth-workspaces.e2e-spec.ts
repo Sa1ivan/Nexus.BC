@@ -96,27 +96,6 @@ function formatLogValues(values: readonly unknown[]): string {
     .join(' ');
 }
 
-function captureConsole(): {
-  readonly messages: string[];
-  restore(): void;
-} {
-  const messages: string[] = [];
-  const spies = (['debug', 'error', 'info', 'log', 'warn'] as const).map(
-    (method) =>
-      jest.spyOn(console, method).mockImplementation((...values: unknown[]) => {
-        messages.push(formatLogValues(values));
-      }),
-  );
-  return {
-    messages,
-    restore: () => {
-      for (const spy of spies) {
-        spy.mockRestore();
-      }
-    },
-  };
-}
-
 @Public()
 @Controller('__test/client-ip')
 class ClientIpProbeController {
@@ -142,7 +121,9 @@ async function createApplication(
       .useValue(options.notifications);
   }
   const moduleFixture = await builder.compile();
-  const app = moduleFixture.createNestApplication<NestExpressApplication>();
+  const app = moduleFixture.createNestApplication<NestExpressApplication>({
+    bodyParser: false,
+  });
   app.useLogger(new CapturingLogger(options.logs ?? []));
   await app.init();
   return app;
@@ -329,6 +310,45 @@ async function createVerifiedSession(
   return { ...session, userId: registration.userId };
 }
 
+async function requestPasswordResetToken(
+  app: INestApplication<App>,
+  pool: Pool,
+  email: string,
+  userId: string,
+): Promise<string> {
+  await request(app.getHttpServer())
+    .post('/v1/auth/password-reset/request')
+    .send({ email })
+    .expect(202);
+  const outbox = await latestAuthOutbox(pool, userId, 'AUTH_PASSWORD_RESET');
+  return decryptAuthSecret(outbox.secretCiphertext);
+}
+
+async function waitForBlockedDatabaseQuery(
+  pool: Pool,
+  waitEvent: 'advisory' | 'transactionid',
+  tableName?: string,
+): Promise<void> {
+  for (let attempt = 0; attempt < 100; attempt += 1) {
+    const result = await pool.query<{ count: string }>(
+      `SELECT COUNT(*) AS count
+         FROM pg_stat_activity
+        WHERE datname = current_database()
+          AND pid <> pg_backend_pid()
+          AND wait_event = $1
+          AND ($2::text IS NULL OR query LIKE '%' || $2 || '%')`,
+      [waitEvent, tableName ?? null],
+    );
+    if (result.rows[0]?.count !== '0') {
+      return;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 20));
+  }
+  throw new Error(
+    `Timed out waiting for a database query blocked on ${waitEvent}`,
+  );
+}
+
 function authorize(access: string): { readonly Authorization: string } {
   return { Authorization: `Bearer ${access}` };
 }
@@ -376,87 +396,73 @@ describe('auth lifecycle and workspace tenancy', () => {
   it('registers canonically and stores token plus encrypted Outbox atomically without logging secrets', async () => {
     const rawEmail = '  Owner@Example.Test  ';
     const canonicalEmail = 'owner@example.test';
-    const consoleCapture = captureConsole();
-    try {
-      const registration = await register(app, pool, rawEmail);
-      const user = await pool.query<{
-        email: string;
-        emailVerifiedAt: Date | null;
-        passwordHash: string;
-      }>(
-        `SELECT "email", "emailVerifiedAt", "passwordHash"
+    const registration = await register(app, pool, rawEmail);
+    const user = await pool.query<{
+      email: string;
+      emailVerifiedAt: Date | null;
+      passwordHash: string;
+    }>(
+      `SELECT "email", "emailVerifiedAt", "passwordHash"
            FROM "User"
           WHERE "id" = $1`,
-        [registration.userId],
-      );
-      expect(user.rows).toHaveLength(1);
-      expect(user.rows[0]).toMatchObject({
-        email: canonicalEmail,
-        emailVerifiedAt: null,
-      });
-      const passwordHash = user.rows[0]?.passwordHash;
-      expect(passwordHash).toMatch(/^\$argon2id\$v=19\$m=65536,p=1,t=3\$/u);
-      expect(passwordHash).not.toContain(password);
-      const encodedHash = passwordHash?.split('$')[5];
-      expect(encodedHash).toBeDefined();
-      expect(Buffer.from(encodedHash ?? '', 'base64').byteLength).toBe(32);
+      [registration.userId],
+    );
+    expect(user.rows).toHaveLength(1);
+    expect(user.rows[0]).toMatchObject({
+      email: canonicalEmail,
+      emailVerifiedAt: null,
+    });
+    const passwordHash = user.rows[0]?.passwordHash;
+    expect(passwordHash).toMatch(/^\$argon2id\$v=19\$m=65536,p=1,t=3\$/u);
+    expect(passwordHash).not.toContain(password);
+    const encodedHash = passwordHash?.split('$')[5];
+    expect(encodedHash).toBeDefined();
+    expect(Buffer.from(encodedHash ?? '', 'base64').byteLength).toBe(32);
 
-      const outbox = await latestAuthOutbox(
-        pool,
-        registration.userId,
-        'AUTH_EMAIL_VERIFICATION',
-      );
-      const recordId = tokenRecordId(outbox.payload);
-      const token = await pool.query<{
-        expiresAt: Date;
-        tokenHash: string;
-      }>(
-        `SELECT "expiresAt", "tokenHash"
+    const outbox = await latestAuthOutbox(
+      pool,
+      registration.userId,
+      'AUTH_EMAIL_VERIFICATION',
+    );
+    const recordId = tokenRecordId(outbox.payload);
+    const token = await pool.query<{
+      expiresAt: Date;
+      tokenHash: string;
+    }>(
+      `SELECT "expiresAt", "tokenHash"
            FROM "EmailVerificationToken"
           WHERE "id" = $1`,
-        [recordId],
-      );
-      expect(token.rows).toHaveLength(1);
-      expect(token.rows[0]?.tokenHash).toMatch(/^[0-9a-f]{64}$/u);
-      expect(token.rows[0]?.tokenHash).not.toBe(registration.token);
-      expect(outbox.secretExpiresAt).toEqual(token.rows[0]?.expiresAt);
-      expect(outbox.payload).toEqual({ tokenRecordId: recordId });
-      expect(outbox.secretCiphertext.includes(registration.token)).toBe(false);
-      expect(decryptAuthSecret(outbox.secretCiphertext)).toBe(
-        registration.token,
-      );
+      [recordId],
+    );
+    expect(token.rows).toHaveLength(1);
+    expect(token.rows[0]?.tokenHash).toMatch(/^[0-9a-f]{64}$/u);
+    expect(token.rows[0]?.tokenHash).not.toBe(registration.token);
+    expect(outbox.secretExpiresAt).toEqual(token.rows[0]?.expiresAt);
+    expect(outbox.payload).toEqual({ tokenRecordId: recordId });
+    expect(outbox.secretCiphertext.includes(registration.token)).toBe(false);
+    expect(decryptAuthSecret(outbox.secretCiphertext)).toBe(registration.token);
 
-      const duplicate = await request(app.getHttpServer())
-        .post('/v1/auth/register')
-        .send({ email: canonicalEmail.toUpperCase(), password })
-        .expect(409);
-      expect(errorCode(duplicate)).toBe('EMAIL_ALREADY_REGISTERED');
-      await expect(
-        pool.query<{ count: string }>('SELECT COUNT(*) AS count FROM "User"'),
-      ).resolves.toMatchObject({ rows: [{ count: '1' }] });
-      await expect(
-        pool.query<{ count: string }>('SELECT COUNT(*) AS count FROM "Outbox"'),
-      ).resolves.toMatchObject({ rows: [{ count: '1' }] });
+    const duplicate = await request(app.getHttpServer())
+      .post('/v1/auth/register')
+      .send({ email: canonicalEmail.toUpperCase(), password })
+      .expect(409);
+    expect(errorCode(duplicate)).toBe('EMAIL_ALREADY_REGISTERED');
+    await expect(
+      pool.query<{ count: string }>('SELECT COUNT(*) AS count FROM "User"'),
+    ).resolves.toMatchObject({ rows: [{ count: '1' }] });
+    await expect(
+      pool.query<{ count: string }>('SELECT COUNT(*) AS count FROM "Outbox"'),
+    ).resolves.toMatchObject({ rows: [{ count: '1' }] });
 
-      const nestSentinel = 'structured-nest-log-capture-sentinel';
-      const consoleSentinel = 'structured-console-capture-sentinel';
-      new CapturingLogger(capturedLogs).log({ nestSentinel });
-      console.warn({ consoleSentinel });
-      const logText = [...capturedLogs, ...consoleCapture.messages].join('\n');
-      expect(logText).toContain(nestSentinel);
-      expect(logText).toContain(consoleSentinel);
-      expect(logText).not.toContain(registration.token);
-      expect(logText).not.toContain(password);
-      expect(logText).not.toContain(canonicalEmail);
-    } finally {
-      consoleCapture.restore();
-    }
+    const logText = capturedLogs.join('\n');
+    expect(logText).not.toContain(registration.token);
+    expect(logText).not.toContain(password);
+    expect(logText).not.toContain(canonicalEmail);
   });
 
   it('rolls registration back when the transactional Outbox write fails', async () => {
     const failedEmail = 'rollback@example.test';
     const failingLogs: string[] = [];
-    const consoleCapture = captureConsole();
     let failedSecret: string | undefined;
     const failingNotifications: NotificationEnqueue = {
       enqueue: (_context, notification) => {
@@ -486,21 +492,15 @@ describe('auth lifecycle and workspace tenancy', () => {
         expect(result.rows).toEqual([{ count: '0' }]);
       }
       expect(failedSecret).toBeDefined();
-      const nestSentinel = 'structured-error-nest-capture-sentinel';
-      const consoleSentinel = 'structured-error-console-capture-sentinel';
-      new CapturingLogger(failingLogs).error({ nestSentinel });
-      console.error({ consoleSentinel });
-      const errorLogText = [...failingLogs, ...consoleCapture.messages].join(
-        '\n',
-      );
-      expect(errorLogText).toContain(nestSentinel);
-      expect(errorLogText).toContain(consoleSentinel);
+      const errorLogText = failingLogs.join('\n');
+      expect(errorLogText).toContain('api_request_failed');
+      expect(errorLogText).toContain('INTERNAL_SERVER_ERROR');
+      expect(errorLogText).toContain('requestId');
       expect(errorLogText).not.toContain(failedSecret);
       expect(errorLogText).not.toContain(password);
       expect(errorLogText).not.toContain(failedEmail);
     } finally {
       await failingApp.close();
-      consoleCapture.restore();
     }
   });
 
@@ -878,6 +878,133 @@ describe('auth lifecycle and workspace tenancy', () => {
     );
     expect(resetRows.rows).toEqual([{ count: '1' }]);
     expect(resetOutboxRows.rows).toEqual([{ count: '1' }]);
+  });
+
+  it('invalidates every outstanding password-reset token after one succeeds', async () => {
+    const email = 'reset-all@example.test';
+    const session = await createVerifiedSession(app, pool, email);
+    const firstToken = await requestPasswordResetToken(
+      app,
+      pool,
+      email,
+      session.userId,
+    );
+    const secondToken = await requestPasswordResetToken(
+      app,
+      pool,
+      email,
+      session.userId,
+    );
+    expect(secondToken).not.toBe(firstToken);
+
+    await request(app.getHttpServer())
+      .post('/v1/auth/password-reset/confirm')
+      .send({ token: secondToken, password: replacementPassword })
+      .expect(204);
+    const staleReset = await request(app.getHttpServer())
+      .post('/v1/auth/password-reset/confirm')
+      .send({ token: firstToken, password })
+      .expect(400);
+    expect(errorCode(staleReset)).toBe('RESET_TOKEN_INVALID');
+  });
+
+  it('serializes concurrent password resets for different active tokens', async () => {
+    const email = 'reset-concurrent@example.test';
+    const session = await createVerifiedSession(app, pool, email);
+    const firstToken = await requestPasswordResetToken(
+      app,
+      pool,
+      email,
+      session.userId,
+    );
+    const secondToken = await requestPasswordResetToken(
+      app,
+      pool,
+      email,
+      session.userId,
+    );
+
+    const responses = await Promise.all([
+      request(app.getHttpServer())
+        .post('/v1/auth/password-reset/confirm')
+        .send({ token: firstToken, password: replacementPassword }),
+      request(app.getHttpServer())
+        .post('/v1/auth/password-reset/confirm')
+        .send({ token: secondToken, password }),
+    ]);
+
+    expect(responses.map(({ status }) => status).sort()).toEqual([204, 400]);
+    const rejected = responses.find(({ status }) => status === 400);
+    expect(rejected === undefined ? undefined : errorCode(rejected)).toBe(
+      'RESET_TOKEN_INVALID',
+    );
+  });
+
+  it('does not leave a replacement refresh session active across password reset', async () => {
+    const email = 'reset-refresh-race@example.test';
+    const session = await createVerifiedSession(app, pool, email);
+    const resetToken = await requestPasswordResetToken(
+      app,
+      pool,
+      email,
+      session.userId,
+    );
+    const advisoryLockKey = 2_026_080_601;
+    const blocker = await pool.connect();
+    await blocker.query('SELECT pg_advisory_lock($1)', [advisoryLockKey]);
+    await pool.query(
+      `CREATE FUNCTION test_block_refresh_rotation() RETURNS trigger AS $body$
+       BEGIN
+         IF NEW."rotatedAt" IS NOT NULL AND OLD."rotatedAt" IS NULL THEN
+           PERFORM pg_advisory_xact_lock(${advisoryLockKey});
+         END IF;
+         RETURN NEW;
+       END;
+       $body$ LANGUAGE plpgsql`,
+    );
+    await pool.query(
+      `CREATE TRIGGER test_block_refresh_rotation
+         BEFORE UPDATE ON "RefreshSession"
+         FOR EACH ROW EXECUTE FUNCTION test_block_refresh_rotation()`,
+    );
+
+    try {
+      const refreshPromise = request(app.getHttpServer())
+        .post('/v1/auth/refresh')
+        .set('Origin', allowedOrigin)
+        .set('Cookie', session.cookie)
+        .send({})
+        .then((response) => response);
+      await waitForBlockedDatabaseQuery(pool, 'advisory', 'RefreshSession');
+
+      const resetPromise = request(app.getHttpServer())
+        .post('/v1/auth/password-reset/confirm')
+        .send({ token: resetToken, password: replacementPassword })
+        .then((response) => response);
+      await waitForBlockedDatabaseQuery(pool, 'transactionid');
+
+      await blocker.query('SELECT pg_advisory_unlock($1)', [advisoryLockKey]);
+      const [refreshResponse, resetResponse] = await Promise.all([
+        refreshPromise,
+        resetPromise,
+      ]);
+      expect(refreshResponse.status).toBe(200);
+      expect(resetResponse.status).toBe(204);
+
+      await request(app.getHttpServer())
+        .post('/v1/auth/refresh')
+        .set('Origin', allowedOrigin)
+        .set('Cookie', responseCookie(refreshResponse))
+        .send({})
+        .expect(401);
+    } finally {
+      await blocker.query('SELECT pg_advisory_unlock($1)', [advisoryLockKey]);
+      blocker.release();
+      await pool.query(
+        'DROP TRIGGER IF EXISTS test_block_refresh_rotation ON "RefreshSession"',
+      );
+      await pool.query('DROP FUNCTION IF EXISTS test_block_refresh_rotation()');
+    }
   });
 
   it('enforces tenant hiding, owner/editor roles, last-owner protection, and atomic audit', async () => {

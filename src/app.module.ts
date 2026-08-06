@@ -13,6 +13,7 @@ import { HealthController } from './shared/health/health.controller';
 import { createApiErrorFilter } from './shared/http/api-error.filter';
 import { createCredentialedCorsMiddleware } from './shared/http/credentialed-cors.middleware';
 import type { CorsConfiguration } from './shared/http/credentialed-cors.middleware';
+import { createHttpJsonParserMiddleware } from './shared/http/http-json-parser';
 import { createRequestIdMiddleware } from './shared/http/request-id.middleware';
 
 interface MiddlewareRouteConsumer {
@@ -50,6 +51,7 @@ export class AppModule {
       .apply(
         createRequestIdMiddleware(),
         createCredentialedCorsMiddleware(this.configuration),
+        createHttpJsonParserMiddleware(),
       )
       .forRoutes({
         path: '*',

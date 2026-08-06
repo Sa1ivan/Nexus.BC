@@ -810,13 +810,13 @@
                             "enum": ["text", "email", "tel", "textarea"]
                           },
                           "placeholder": {
-                            "$ref": "#/definitions/label"
+                            "$ref": "#/definitions/shortText"
                           },
                           "required": {
                             "type": "boolean"
                           },
                           "helpText": {
-                            "$ref": "#/definitions/shortText"
+                            "$ref": "#/definitions/longText"
                           },
                           "order": {
                             "type": "integer",

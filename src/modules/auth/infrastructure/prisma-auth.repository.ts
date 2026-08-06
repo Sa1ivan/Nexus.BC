@@ -23,7 +23,7 @@ interface UserRow {
   readonly passwordHash: string;
 }
 
-interface RefreshRow extends UserRow {
+interface RefreshRow {
   readonly expiresAt: Date;
   readonly familyId: string;
   readonly refreshSessionId: string;
@@ -32,10 +32,18 @@ interface RefreshRow extends UserRow {
   readonly userId: string;
 }
 
+interface RefreshIdentityRow {
+  readonly userId: string;
+}
+
 interface TokenRow {
   readonly consumedAt: Date | null;
   readonly expiresAt: Date;
   readonly id: string;
+  readonly userId: string;
+}
+
+interface TokenIdentityRow {
   readonly userId: string;
 }
 
@@ -75,6 +83,10 @@ interface AuthTransactionClient {
     create(arguments_: {
       readonly data: Readonly<Record<string, unknown>>;
     }): Promise<unknown>;
+    updateMany(arguments_: {
+      readonly where: Readonly<Record<string, unknown>>;
+      readonly data: Readonly<Record<string, unknown>>;
+    }): Promise<{ readonly count: number }>;
   };
   readonly refreshSession: {
     create(arguments_: {
@@ -242,18 +254,39 @@ export class PrismaAuthRepository implements AuthRepository {
     now: Date,
   ): Promise<RefreshRotationResult> {
     return this.withTransaction(context, async (transaction) => {
+      const identities = await transaction.$queryRawUnsafe<
+        RefreshIdentityRow[]
+      >(
+        `SELECT "userId"
+           FROM "RefreshSession"
+          WHERE "tokenHash" = $1`,
+        currentTokenHash,
+      );
+      const identity = identities[0];
+      if (identity === undefined) {
+        return { kind: 'invalid' };
+      }
+      const users = await transaction.$queryRawUnsafe<UserRow[]>(
+        `SELECT "id", "email", "passwordHash", "emailVerifiedAt"
+           FROM "User"
+          WHERE "id" = $1::uuid
+          FOR UPDATE`,
+        identity.userId,
+      );
+      const user = users[0];
+      if (user === undefined) {
+        return { kind: 'invalid' };
+      }
       const rows = await transaction.$queryRawUnsafe<RefreshRow[]>(
-        `SELECT s."id" AS "refreshSessionId", s."userId", s."familyId",
-                s."expiresAt", s."rotatedAt", s."revokedAt",
-                u."id", u."email", u."passwordHash", u."emailVerifiedAt"
-           FROM "RefreshSession" s
-           JOIN "User" u ON u."id" = s."userId"
-          WHERE s."tokenHash" = $1
-          FOR UPDATE OF s`,
+        `SELECT "id" AS "refreshSessionId", "userId", "familyId",
+                "expiresAt", "rotatedAt", "revokedAt"
+           FROM "RefreshSession"
+          WHERE "tokenHash" = $1
+          FOR UPDATE`,
         currentTokenHash,
       );
       const current = rows[0];
-      if (current === undefined) {
+      if (current === undefined || current.userId !== user.id) {
         return { kind: 'invalid' };
       }
       if (current.rotatedAt !== null) {
@@ -266,7 +299,7 @@ export class PrismaAuthRepository implements AuthRepository {
       if (
         current.revokedAt !== null ||
         current.expiresAt.getTime() <= now.getTime() ||
-        current.emailVerifiedAt === null
+        user.emailVerifiedAt === null
       ) {
         return { kind: 'invalid' };
       }
@@ -286,7 +319,7 @@ export class PrismaAuthRepository implements AuthRepository {
       });
       return {
         kind: 'rotated',
-        principal: { userId: current.userId, email: current.email },
+        principal: { userId: current.userId, email: user.email },
       };
     });
   }
@@ -338,6 +371,28 @@ export class PrismaAuthRepository implements AuthRepository {
     now: Date,
   ): Promise<boolean> {
     return this.withTransaction(context, async (transaction) => {
+      const identities = await transaction.$queryRawUnsafe<TokenIdentityRow[]>(
+        `SELECT "userId"
+           FROM "PasswordResetToken"
+          WHERE "tokenHash" = $1`,
+        tokenHash,
+      );
+      const identity = identities[0];
+      if (identity === undefined) {
+        return false;
+      }
+      const users = await transaction.$queryRawUnsafe<
+        { readonly id: string }[]
+      >(
+        `SELECT "id"
+           FROM "User"
+          WHERE "id" = $1::uuid
+          FOR UPDATE`,
+        identity.userId,
+      );
+      if (users[0] === undefined) {
+        return false;
+      }
       const rows = await transaction.$queryRawUnsafe<TokenRow[]>(
         `SELECT "id", "userId", "expiresAt", "consumedAt"
            FROM "PasswordResetToken"
@@ -353,13 +408,10 @@ export class PrismaAuthRepository implements AuthRepository {
       ) {
         return false;
       }
-      await transaction.$executeRawUnsafe(
-        `UPDATE "PasswordResetToken"
-            SET "consumedAt" = $2
-          WHERE "id" = $1::uuid`,
-        token.id,
-        now,
-      );
+      await transaction.passwordResetToken.updateMany({
+        where: { userId: token.userId, consumedAt: null },
+        data: { consumedAt: now },
+      });
       await transaction.user.update({
         where: { id: token.userId },
         data: { passwordHash },

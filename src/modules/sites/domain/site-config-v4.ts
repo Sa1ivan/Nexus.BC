@@ -1,8 +1,8 @@
-import { existsSync, readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { readFileSync } from 'node:fs';
 
 import Ajv from 'ajv';
 import type { ValidateFunction } from 'ajv';
+import { resolveSiteConfigSchemaPath } from './site-config-schema-loader';
 
 export const SITE_CONFIG_V4_CANONICAL_BYTES_LIMIT = 1_048_576;
 export const SITE_CONFIG_V4_JSON_ENVELOPE_BYTES_LIMIT = 1_310_720;
@@ -35,16 +35,7 @@ const RESERVED_PAGE_SLUGS = new Set([
   'p',
 ]);
 
-const siteConfigSchemaPath = [
-  resolve(process.cwd(), 'contracts/site-config/v4.schema.json'),
-  resolve(__dirname, '../../../../contracts/site-config/v4.schema.json'),
-  resolve(__dirname, '../../../../../contracts/site-config/v4.schema.json'),
-].find(existsSync);
-
-if (siteConfigSchemaPath === undefined) {
-  throw new Error('SiteConfig v4 schema artifact is unavailable.');
-}
-
+const siteConfigSchemaPath = resolveSiteConfigSchemaPath(__dirname);
 const schema = JSON.parse(readFileSync(siteConfigSchemaPath, 'utf8')) as object;
 const validateSchema: ValidateFunction = new Ajv({
   allErrors: false,
@@ -60,7 +51,7 @@ export function validateAndCanonicalizeSiteConfigV4Json(
     return failure('json-envelope-too-large');
   }
 
-  if (exceedsJsonDepth(serialized, SITE_CONFIG_V4_MAX_JSON_DEPTH)) {
+  if (exceedsSiteConfigJsonDepth(serialized, SITE_CONFIG_V4_MAX_JSON_DEPTH)) {
     return failure('json-depth-exceeded');
   }
 
@@ -104,7 +95,10 @@ function failure(
   return { ok: false, code };
 }
 
-function exceedsJsonDepth(serialized: string, maximumDepth: number): boolean {
+function exceedsSiteConfigJsonDepth(
+  serialized: string,
+  maximumDepth: number,
+): boolean {
   let depth = 0;
   let insideString = false;
   let escaped = false;
@@ -281,7 +275,7 @@ function addUniqueString(values: Set<string>, value: unknown): boolean {
 
 function isSafeCloudMediaSource(source: string): boolean {
   if (
-    source.length > 2_048 ||
+    [...source].length > 2_048 ||
     hasControlCharacter(source) ||
     source.includes('\\') ||
     source !== source.trim()
@@ -318,7 +312,7 @@ function isSafeCloudMediaSource(source: string): boolean {
 
 function isSafeCloudLinkTarget(target: string): boolean {
   if (
-    target.length > 2_048 ||
+    [...target].length > 2_048 ||
     target !== target.trim() ||
     hasControlCharacter(target) ||
     target.includes('\\') ||

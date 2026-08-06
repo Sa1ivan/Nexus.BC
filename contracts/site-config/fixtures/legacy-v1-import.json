@@ -1,0 +1,71 @@
+{
+  "id": "site-contract",
+  "schemaVersion": 1,
+  "name": "Legacy v1 fixture",
+  "pages": [
+    {
+      "id": "page-home",
+      "slug": "home",
+      "title": "Главная",
+      "blocks": [
+        {
+          "id": "hero-home",
+          "anchor": "hero",
+          "type": "hero",
+          "design": {
+            "accentColor": "teal",
+            "fontPairing": "grotesk",
+            "density": "balanced",
+            "templateStyle": "classic"
+          },
+          "title": "Соберите сайт быстрее",
+          "subtitle": "Contract subtitle",
+          "buttonText": "Начать",
+          "buttonHref": "#lead-form",
+          "media": {
+            "src": "https://images.unsplash.com/photo-1497366754035-f200968a6e72?auto=format&fit=crop&w=1200&q=80",
+            "alt": "Рабочая зона",
+            "focalPoint": {
+              "x": 50,
+              "y": 50
+            }
+          },
+          "styles": {
+            "backgroundColor": "#f5f7fb",
+            "textColor": "#111827",
+            "minHeight": "520px",
+            "alignment": "center",
+            "buttonBackgroundColor": "#2563eb",
+            "buttonTextColor": "#ffffff"
+          }
+        },
+        {
+          "id": "lead-form-home",
+          "anchor": "lead-form",
+          "type": "leadForm",
+          "design": {
+            "accentColor": "teal",
+            "fontPairing": "grotesk",
+            "density": "balanced",
+            "templateStyle": "classic"
+          },
+          "title": "Оставьте заявку",
+          "description": "Расскажите о задаче",
+          "submitText": "Отправить",
+          "successMessage": "Заявка сохранена",
+          "fields": [
+            {
+              "id": "name",
+              "label": "Имя",
+              "type": "text",
+              "placeholder": "Ваше имя",
+              "required": true,
+              "helpText": "",
+              "order": 1
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -111,6 +111,33 @@ function isProcessEnvironment(
     return true;
   }
 
+  if (
+    ts.isBindingElement(node) &&
+    (node.propertyName?.getText(node.getSourceFile()) ??
+      node.name.getText()) === 'env' &&
+    ts.isObjectBindingPattern(node.parent) &&
+    ts.isVariableDeclaration(node.parent.parent) &&
+    node.parent.parent.initializer !== undefined &&
+    isProcessReference(node.parent.parent.initializer, bindings)
+  ) {
+    return true;
+  }
+
+  if (
+    ts.isCallExpression(node) &&
+    ts.isPropertyAccessExpression(node.expression) &&
+    ts.isIdentifier(node.expression.expression) &&
+    node.expression.expression.text === 'Reflect' &&
+    node.expression.name.text === 'get' &&
+    node.arguments[0] !== undefined &&
+    isProcessReference(node.arguments[0], bindings) &&
+    node.arguments[1] !== undefined &&
+    ts.isStringLiteralLike(node.arguments[1]) &&
+    node.arguments[1].text === 'env'
+  ) {
+    return true;
+  }
+
   const target = propertyTarget(node);
   return (
     propertyName(node) === 'env' &&
@@ -201,14 +228,27 @@ describe('runtime configuration boundary', () => {
           void runtimeProcess.env;
         }
       `,
+      'destructured.ts': `
+        export function readDestructured(): void {
+          const { env: runtimeEnvironment } = process;
+          void runtimeEnvironment;
+        }
+      `,
+      'reflective.ts': `
+        export function readReflective(): void {
+          void Reflect.get(process, 'env');
+        }
+      `,
     });
 
     try {
       expect(findProcessEnvironmentReads(fixture.sourceRoot)).toEqual([
         { file: 'bracket.ts', functionName: 'readBracket' },
         { file: 'default-import.ts', functionName: 'readDefaultImport' },
+        { file: 'destructured.ts', functionName: 'readDestructured' },
         { file: 'global-this.ts', functionName: 'readGlobalThis' },
         { file: 'named-import.ts', functionName: 'readNamedImport' },
+        { file: 'reflective.ts', functionName: 'readReflective' },
       ]);
     } finally {
       removeArchitectureFixture(fixture);

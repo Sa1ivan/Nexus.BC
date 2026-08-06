@@ -1,5 +1,11 @@
-import { HttpException, HttpStatus, type ArgumentsHost } from '@nestjs/common';
-import type { Response } from 'express';
+import {
+  HttpException,
+  HttpStatus,
+  Logger,
+  type ArgumentsHost,
+  type LoggerService,
+} from '@nestjs/common';
+import type { Request, Response } from 'express';
 import { ensureResponseRequestId } from './request-id.middleware';
 
 interface ErrorContract {
@@ -44,6 +50,10 @@ const errorsByStatus: Readonly<Partial<Record<number, ErrorContract>>> = {
     code: 'RATE_LIMITED',
     message: 'Too many requests',
   },
+  [HttpStatus.PAYLOAD_TOO_LARGE]: {
+    code: 'PAYLOAD_TOO_LARGE',
+    message: 'Request body is too large',
+  },
 };
 
 const internalServerError: ErrorContract = {
@@ -87,9 +97,16 @@ function classifyHttpException(exception: HttpException): ClassifiedError {
 }
 
 function classifyError(exception: unknown): ClassifiedError {
-  return exception instanceof HttpException
-    ? classifyHttpException(exception)
-    : { status: HttpStatus.INTERNAL_SERVER_ERROR, ...internalServerError };
+  if (exception instanceof HttpException) {
+    return classifyHttpException(exception);
+  }
+  if (isRecord(exception) && exception['type'] === 'entity.too.large') {
+    return {
+      status: HttpStatus.PAYLOAD_TOO_LARGE,
+      ...errorsByStatus[HttpStatus.PAYLOAD_TOO_LARGE]!,
+    };
+  }
+  return { status: HttpStatus.INTERNAL_SERVER_ERROR, ...internalServerError };
 }
 
 export function createApiHttpException(
@@ -133,12 +150,25 @@ export function createApiHttpException(
   return new TrustedApiHttpException(status, Object.freeze(contract));
 }
 
-export function createApiErrorFilter() {
+export function createApiErrorFilter(
+  logger: Pick<LoggerService, 'error'> = new Logger('ApiErrorFilter'),
+) {
   return {
     catch(exception: unknown, host: ArgumentsHost): void {
-      const response = host.switchToHttp().getResponse<Response>();
+      const http = host.switchToHttp();
+      const request = http.getRequest<Request>();
+      const response = http.getResponse<Response>();
       const requestId = ensureResponseRequestId(response);
       const classified = classifyError(exception);
+      if (classified.status >= 500) {
+        logger.error({
+          event: 'api_request_failed',
+          requestId,
+          status: classified.status,
+          code: classified.code,
+          method: request.method,
+        });
+      }
       const error = {
         code: classified.code,
         message: classified.message,

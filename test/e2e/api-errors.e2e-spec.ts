@@ -11,6 +11,7 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { Test, type TestingModule } from '@nestjs/testing';
+import type { NestExpressApplication } from '@nestjs/platform-express';
 import request from 'supertest';
 import type { App } from 'supertest/types';
 import { AppModule } from '../../src/app.module';
@@ -158,7 +159,10 @@ describe('API error contract', () => {
       controllers: [ErrorProbeController],
     }).compile();
 
-    app = moduleFixture.createNestApplication();
+    const nestApp = moduleFixture.createNestApplication<NestExpressApplication>(
+      { bodyParser: false },
+    );
+    app = nestApp;
     await app.init();
   });
 
@@ -322,6 +326,27 @@ describe('API error contract', () => {
       code: 'VALIDATION_ERROR',
       message: 'Request validation failed',
     });
+    expectRequestId(response, error);
+  });
+
+  it('normalizes an oversized JSON envelope rejected before routing', async () => {
+    const base = '{"value":1}';
+    const serialized = `${base}${' '.repeat(1_310_721 - Buffer.byteLength(base))}`;
+    const response = await request(app.getHttpServer())
+      .post('/__test/errors/body')
+      .set('Content-Type', 'application/json')
+      .set('Origin', 'http://localhost:4200')
+      .send(serialized)
+      .expect(HttpStatus.PAYLOAD_TOO_LARGE);
+    const error = readErrorBody(response);
+
+    expect(error).toMatchObject({
+      code: 'PAYLOAD_TOO_LARGE',
+      message: 'Request body is too large',
+    });
+    expect(response.headers['access-control-allow-origin']).toBe(
+      'http://localhost:4200',
+    );
     expectRequestId(response, error);
   });
 

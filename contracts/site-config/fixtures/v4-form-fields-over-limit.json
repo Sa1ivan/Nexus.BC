@@ -1,0 +1,455 @@
+{
+  "id": "site-contract",
+  "schemaVersion": 4,
+  "name": "Contract fixture",
+  "theme": {
+    "pageBackground": "#ffffff",
+    "surfaceColor": "#f5f7fb",
+    "textColor": "#111827",
+    "mutedTextColor": "#5f6b7a",
+    "accentColor": "#0a7f72",
+    "fontPairing": "grotesk",
+    "typeScale": "balanced",
+    "contentWidth": "wide",
+    "sectionSpacing": "balanced",
+    "buttonShape": "rounded",
+    "radius": 8
+  },
+  "business": {
+    "brandName": "Nexus Studio",
+    "logo": null,
+    "phone": "+7 999 000-00-00",
+    "email": "hello@nexus.app",
+    "address": "",
+    "hours": "",
+    "messengers": [],
+    "socialLinks": []
+  },
+  "seo": {
+    "language": "ru",
+    "favicon": null
+  },
+  "chrome": {
+    "header": {
+      "id": "header-main",
+      "anchor": "header",
+      "type": "siteHeader",
+      "appearance": {},
+      "hidden": false,
+      "design": {
+        "accentColor": "teal",
+        "fontPairing": "grotesk",
+        "density": "balanced",
+        "templateStyle": "classic"
+      },
+      "inheritBusiness": true,
+      "variant": "stretchedNav",
+      "brandName": "Nexus Studio",
+      "navigationItems": [
+        {
+          "id": "nav-home",
+          "label": "Главная",
+          "target": "#hero",
+          "kind": "anchor",
+          "openInNewTab": false
+        }
+      ],
+      "cta": {
+        "id": "header-cta",
+        "label": "Связаться",
+        "target": "#lead-form",
+        "kind": "anchor",
+        "openInNewTab": false
+      }
+    },
+    "footer": {
+      "id": "footer-main",
+      "anchor": "contact",
+      "type": "siteFooter",
+      "appearance": {},
+      "hidden": false,
+      "design": {
+        "accentColor": "teal",
+        "fontPairing": "grotesk",
+        "density": "balanced",
+        "templateStyle": "classic"
+      },
+      "inheritBusiness": true,
+      "variant": "bookingFooter",
+      "brandName": "Nexus Studio",
+      "cta": {
+        "id": "footer-cta",
+        "label": "Оставить заявку",
+        "target": "#lead-form",
+        "kind": "anchor",
+        "openInNewTab": false
+      },
+      "contactLines": [
+        "hello@nexus.app"
+      ],
+      "links": []
+    }
+  },
+  "pages": [
+    {
+      "id": "page-home",
+      "slug": "home",
+      "title": "Главная",
+      "seo": {
+        "title": "Nexus Studio",
+        "description": "Contract fixture",
+        "socialImage": null,
+        "noIndex": false
+      },
+      "blocks": [
+        {
+          "id": "hero-home",
+          "anchor": "hero",
+          "type": "hero",
+          "appearance": {},
+          "hidden": false,
+          "design": {
+            "accentColor": "teal",
+            "fontPairing": "grotesk",
+            "density": "balanced",
+            "templateStyle": "classic"
+          },
+          "title": "Соберите сайт быстрее",
+          "subtitle": "Contract subtitle",
+          "buttonText": "Начать",
+          "buttonHref": "#lead-form",
+          "media": {
+            "src": "./images/landing/office-studio.webp",
+            "alt": "Рабочая зона",
+            "focalPoint": {
+              "x": 50,
+              "y": 50
+            }
+          },
+          "styles": {
+            "backgroundColor": "#f5f7fb",
+            "textColor": "#111827",
+            "minHeight": "520px",
+            "alignment": "center"
+          }
+        },
+        {
+          "id": "lead-form-home",
+          "anchor": "lead-form",
+          "type": "leadForm",
+          "appearance": {},
+          "hidden": false,
+          "design": {
+            "accentColor": "teal",
+            "fontPairing": "grotesk",
+            "density": "balanced",
+            "templateStyle": "classic"
+          },
+          "title": "Оставьте заявку",
+          "description": "Расскажите о задаче",
+          "submitText": "Отправить",
+          "successMessage": "Заявка сохранена",
+          "fields": [
+            {
+              "id": "field-1",
+              "label": "Field 1",
+              "type": "text",
+              "placeholder": "Ваше имя",
+              "required": true,
+              "helpText": "",
+              "order": 1
+            },
+            {
+              "id": "field-2",
+              "label": "Field 2",
+              "type": "text",
+              "placeholder": "Ваше имя",
+              "required": true,
+              "helpText": "",
+              "order": 2
+            },
+            {
+              "id": "field-3",
+              "label": "Field 3",
+              "type": "text",
+              "placeholder": "Ваше имя",
+              "required": true,
+              "helpText": "",
+              "order": 3
+            },
+            {
+              "id": "field-4",
+              "label": "Field 4",
+              "type": "text",
+              "placeholder": "Ваше имя",
+              "required": true,
+              "helpText": "",
+              "order": 4
+            },
+            {
+              "id": "field-5",
+              "label": "Field 5",
+              "type": "text",
+              "placeholder": "Ваше имя",
+              "required": true,
+              "helpText": "",
+              "order": 5
+            },
+            {
+              "id": "field-6",
+              "label": "Field 6",
+              "type": "text",
+              "placeholder": "Ваше имя",
+              "required": true,
+              "helpText": "",
+              "order": 6
+            },
+            {
+              "id": "field-7",
+              "label": "Field 7",
+              "type": "text",
+              "placeholder": "Ваше имя",
+              "required": true,
+              "helpText": "",
+              "order": 7
+            },
+            {
+              "id": "field-8",
+              "label": "Field 8",
+              "type": "text",
+              "placeholder": "Ваше имя",
+              "required": true,
+              "helpText": "",
+              "order": 8
+            },
+            {
+              "id": "field-9",
+              "label": "Field 9",
+              "type": "text",
+              "placeholder": "Ваше имя",
+              "required": true,
+              "helpText": "",
+              "order": 9
+            },
+            {
+              "id": "field-10",
+              "label": "Field 10",
+              "type": "text",
+              "placeholder": "Ваше имя",
+              "required": true,
+              "helpText": "",
+              "order": 10
+            },
+            {
+              "id": "field-11",
+              "label": "Field 11",
+              "type": "text",
+              "placeholder": "Ваше имя",
+              "required": true,
+              "helpText": "",
+              "order": 11
+            },
+            {
+              "id": "field-12",
+              "label": "Field 12",
+              "type": "text",
+              "placeholder": "Ваше имя",
+              "required": true,
+              "helpText": "",
+              "order": 12
+            },
+            {
+              "id": "field-13",
+              "label": "Field 13",
+              "type": "text",
+              "placeholder": "Ваше имя",
+              "required": true,
+              "helpText": "",
+              "order": 13
+            },
+            {
+              "id": "field-14",
+              "label": "Field 14",
+              "type": "text",
+              "placeholder": "Ваше имя",
+              "required": true,
+              "helpText": "",
+              "order": 14
+            },
+            {
+              "id": "field-15",
+              "label": "Field 15",
+              "type": "text",
+              "placeholder": "Ваше имя",
+              "required": true,
+              "helpText": "",
+              "order": 15
+            },
+            {
+              "id": "field-16",
+              "label": "Field 16",
+              "type": "text",
+              "placeholder": "Ваше имя",
+              "required": true,
+              "helpText": "",
+              "order": 16
+            },
+            {
+              "id": "field-17",
+              "label": "Field 17",
+              "type": "text",
+              "placeholder": "Ваше имя",
+              "required": true,
+              "helpText": "",
+              "order": 17
+            },
+            {
+              "id": "field-18",
+              "label": "Field 18",
+              "type": "text",
+              "placeholder": "Ваше имя",
+              "required": true,
+              "helpText": "",
+              "order": 18
+            },
+            {
+              "id": "field-19",
+              "label": "Field 19",
+              "type": "text",
+              "placeholder": "Ваше имя",
+              "required": true,
+              "helpText": "",
+              "order": 19
+            },
+            {
+              "id": "field-20",
+              "label": "Field 20",
+              "type": "text",
+              "placeholder": "Ваше имя",
+              "required": true,
+              "helpText": "",
+              "order": 20
+            },
+            {
+              "id": "field-21",
+              "label": "Field 21",
+              "type": "text",
+              "placeholder": "Ваше имя",
+              "required": true,
+              "helpText": "",
+              "order": 21
+            },
+            {
+              "id": "field-22",
+              "label": "Field 22",
+              "type": "text",
+              "placeholder": "Ваше имя",
+              "required": true,
+              "helpText": "",
+              "order": 22
+            },
+            {
+              "id": "field-23",
+              "label": "Field 23",
+              "type": "text",
+              "placeholder": "Ваше имя",
+              "required": true,
+              "helpText": "",
+              "order": 23
+            },
+            {
+              "id": "field-24",
+              "label": "Field 24",
+              "type": "text",
+              "placeholder": "Ваше имя",
+              "required": true,
+              "helpText": "",
+              "order": 24
+            },
+            {
+              "id": "field-25",
+              "label": "Field 25",
+              "type": "text",
+              "placeholder": "Ваше имя",
+              "required": true,
+              "helpText": "",
+              "order": 25
+            },
+            {
+              "id": "field-26",
+              "label": "Field 26",
+              "type": "text",
+              "placeholder": "Ваше имя",
+              "required": true,
+              "helpText": "",
+              "order": 26
+            },
+            {
+              "id": "field-27",
+              "label": "Field 27",
+              "type": "text",
+              "placeholder": "Ваше имя",
+              "required": true,
+              "helpText": "",
+              "order": 27
+            },
+            {
+              "id": "field-28",
+              "label": "Field 28",
+              "type": "text",
+              "placeholder": "Ваше имя",
+              "required": true,
+              "helpText": "",
+              "order": 28
+            },
+            {
+              "id": "field-29",
+              "label": "Field 29",
+              "type": "text",
+              "placeholder": "Ваше имя",
+              "required": true,
+              "helpText": "",
+              "order": 29
+            },
+            {
+              "id": "field-30",
+              "label": "Field 30",
+              "type": "text",
+              "placeholder": "Ваше имя",
+              "required": true,
+              "helpText": "",
+              "order": 30
+            },
+            {
+              "id": "field-31",
+              "label": "Field 31",
+              "type": "text",
+              "placeholder": "Ваше имя",
+              "required": true,
+              "helpText": "",
+              "order": 31
+            },
+            {
+              "id": "field-32",
+              "label": "Field 32",
+              "type": "text",
+              "placeholder": "Ваше имя",
+              "required": true,
+              "helpText": "",
+              "order": 32
+            },
+            {
+              "id": "field-33",
+              "label": "Field 33",
+              "type": "text",
+              "placeholder": "Ваше имя",
+              "required": true,
+              "helpText": "",
+              "order": 33
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
