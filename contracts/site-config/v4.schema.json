@@ -1,0 +1,1206 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://nexus.local/contracts/site-config/v4.schema.json",
+  "title": "Nexus SiteConfig v4",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "id": {
+      "$ref": "#/definitions/id"
+    },
+    "name": {
+      "$ref": "#/definitions/label"
+    },
+    "schemaVersion": {
+      "const": 4
+    },
+    "theme": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "pageBackground": {
+          "$ref": "#/definitions/color"
+        },
+        "surfaceColor": {
+          "$ref": "#/definitions/color"
+        },
+        "textColor": {
+          "$ref": "#/definitions/color"
+        },
+        "mutedTextColor": {
+          "$ref": "#/definitions/color"
+        },
+        "accentColor": {
+          "$ref": "#/definitions/color"
+        },
+        "fontPairing": {
+          "enum": ["grotesk", "serif", "rounded", "geometric", "humanist", "mono"]
+        },
+        "typeScale": {
+          "enum": ["compact", "balanced", "display"]
+        },
+        "contentWidth": {
+          "enum": ["narrow", "wide", "full"]
+        },
+        "sectionSpacing": {
+          "enum": ["compact", "balanced", "spacious"]
+        },
+        "buttonShape": {
+          "enum": ["square", "rounded", "pill"]
+        },
+        "radius": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 32
+        }
+      },
+      "required": [
+        "pageBackground",
+        "surfaceColor",
+        "textColor",
+        "mutedTextColor",
+        "accentColor",
+        "fontPairing",
+        "typeScale",
+        "contentWidth",
+        "sectionSpacing",
+        "buttonShape",
+        "radius"
+      ]
+    },
+    "business": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "brandName": {
+          "$ref": "#/definitions/label"
+        },
+        "logo": {
+          "oneOf": [
+            {
+              "$ref": "#/definitions/media"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "phone": {
+          "$ref": "#/definitions/shortText"
+        },
+        "email": {
+          "$ref": "#/definitions/shortText"
+        },
+        "address": {
+          "$ref": "#/definitions/shortText"
+        },
+        "hours": {
+          "$ref": "#/definitions/shortText"
+        },
+        "messengers": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/link"
+          },
+          "maxItems": 100
+        },
+        "socialLinks": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/link"
+          },
+          "maxItems": 100
+        }
+      },
+      "required": [
+        "brandName",
+        "logo",
+        "phone",
+        "email",
+        "address",
+        "hours",
+        "messengers",
+        "socialLinks"
+      ]
+    },
+    "seo": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "language": {
+          "$ref": "#/definitions/label"
+        },
+        "favicon": {
+          "oneOf": [
+            {
+              "$ref": "#/definitions/media"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": ["language", "favicon"]
+    },
+    "chrome": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "header": {
+          "$ref": "#/definitions/header"
+        },
+        "footer": {
+          "$ref": "#/definitions/footer"
+        }
+      },
+      "required": ["header", "footer"]
+    },
+    "pages": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "$ref": "#/definitions/id"
+          },
+          "slug": {
+            "$ref": "#/definitions/slug"
+          },
+          "title": {
+            "$ref": "#/definitions/label"
+          },
+          "seo": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "title": {
+                "$ref": "#/definitions/label"
+              },
+              "description": {
+                "$ref": "#/definitions/longText"
+              },
+              "socialImage": {
+                "oneOf": [
+                  {
+                    "$ref": "#/definitions/media"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "noIndex": {
+                "type": "boolean"
+              }
+            },
+            "required": ["title", "description", "socialImage", "noIndex"]
+          },
+          "blocks": {
+            "type": "array",
+            "items": {
+              "oneOf": [
+                {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "id": {
+                      "$ref": "#/definitions/id"
+                    },
+                    "anchor": {
+                      "$ref": "#/definitions/id"
+                    },
+                    "type": {
+                      "const": "hero"
+                    },
+                    "appearance": {
+                      "$ref": "#/definitions/appearance"
+                    },
+                    "hidden": {
+                      "type": "boolean"
+                    },
+                    "design": {
+                      "$ref": "#/definitions/design"
+                    },
+                    "title": {
+                      "$ref": "#/definitions/label"
+                    },
+                    "subtitle": {
+                      "$ref": "#/definitions/longText"
+                    },
+                    "buttonText": {
+                      "$ref": "#/definitions/label"
+                    },
+                    "buttonHref": {
+                      "$ref": "#/definitions/url"
+                    },
+                    "media": {
+                      "$ref": "#/definitions/media"
+                    },
+                    "primaryButtonAppearance": {
+                      "$ref": "#/definitions/buttonAppearance"
+                    },
+                    "secondaryButton": {
+                      "$ref": "#/definitions/link"
+                    },
+                    "styles": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "properties": {
+                        "backgroundColor": {
+                          "$ref": "#/definitions/color"
+                        },
+                        "textColor": {
+                          "$ref": "#/definitions/color"
+                        },
+                        "minHeight": {
+                          "$ref": "#/definitions/shortText"
+                        },
+                        "alignment": {
+                          "enum": ["left", "center", "right"]
+                        }
+                      },
+                      "required": ["backgroundColor", "textColor", "minHeight", "alignment"]
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "anchor",
+                    "type",
+                    "hidden",
+                    "title",
+                    "subtitle",
+                    "buttonText",
+                    "buttonHref",
+                    "styles"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "id": {
+                      "$ref": "#/definitions/id"
+                    },
+                    "anchor": {
+                      "$ref": "#/definitions/id"
+                    },
+                    "type": {
+                      "const": "contentMedia"
+                    },
+                    "appearance": {
+                      "$ref": "#/definitions/appearance"
+                    },
+                    "hidden": {
+                      "type": "boolean"
+                    },
+                    "design": {
+                      "$ref": "#/definitions/design"
+                    },
+                    "variant": {
+                      "enum": ["textOnly", "mediaLeft", "mediaRight"]
+                    },
+                    "eyebrow": {
+                      "$ref": "#/definitions/shortText"
+                    },
+                    "title": {
+                      "$ref": "#/definitions/label"
+                    },
+                    "body": {
+                      "$ref": "#/definitions/longText"
+                    },
+                    "cta": {
+                      "$ref": "#/definitions/link"
+                    },
+                    "media": {
+                      "$ref": "#/definitions/media"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "anchor",
+                    "type",
+                    "hidden",
+                    "variant",
+                    "eyebrow",
+                    "title",
+                    "body"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "id": {
+                      "$ref": "#/definitions/id"
+                    },
+                    "anchor": {
+                      "$ref": "#/definitions/id"
+                    },
+                    "type": {
+                      "const": "featureGrid"
+                    },
+                    "appearance": {
+                      "$ref": "#/definitions/appearance"
+                    },
+                    "hidden": {
+                      "type": "boolean"
+                    },
+                    "design": {
+                      "$ref": "#/definitions/design"
+                    },
+                    "variant": {
+                      "enum": ["cards", "editorialList", "numberedSteps"]
+                    },
+                    "eyebrow": {
+                      "$ref": "#/definitions/shortText"
+                    },
+                    "title": {
+                      "$ref": "#/definitions/label"
+                    },
+                    "description": {
+                      "$ref": "#/definitions/longText"
+                    },
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "properties": {
+                          "id": {
+                            "$ref": "#/definitions/id"
+                          },
+                          "icon": {
+                            "$ref": "#/definitions/shortText"
+                          },
+                          "image": {
+                            "$ref": "#/definitions/media"
+                          },
+                          "title": {
+                            "$ref": "#/definitions/label"
+                          },
+                          "description": {
+                            "$ref": "#/definitions/longText"
+                          },
+                          "link": {
+                            "$ref": "#/definitions/link"
+                          }
+                        },
+                        "required": ["id", "title", "description"]
+                      },
+                      "maxItems": 100
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "anchor",
+                    "type",
+                    "hidden",
+                    "variant",
+                    "eyebrow",
+                    "title",
+                    "description",
+                    "items"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "id": {
+                      "$ref": "#/definitions/id"
+                    },
+                    "anchor": {
+                      "$ref": "#/definitions/id"
+                    },
+                    "type": {
+                      "const": "offerList"
+                    },
+                    "appearance": {
+                      "$ref": "#/definitions/appearance"
+                    },
+                    "hidden": {
+                      "type": "boolean"
+                    },
+                    "design": {
+                      "$ref": "#/definitions/design"
+                    },
+                    "variant": {
+                      "enum": ["menuGrid", "roomCards", "pricingTable", "catalogGrid"]
+                    },
+                    "eyebrow": {
+                      "$ref": "#/definitions/shortText"
+                    },
+                    "title": {
+                      "$ref": "#/definitions/label"
+                    },
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "properties": {
+                          "id": {
+                            "$ref": "#/definitions/id"
+                          },
+                          "title": {
+                            "$ref": "#/definitions/label"
+                          },
+                          "description": {
+                            "$ref": "#/definitions/longText"
+                          },
+                          "meta": {
+                            "$ref": "#/definitions/shortText"
+                          },
+                          "price": {
+                            "$ref": "#/definitions/shortText"
+                          },
+                          "badge": {
+                            "$ref": "#/definitions/shortText"
+                          },
+                          "image": {
+                            "$ref": "#/definitions/media"
+                          },
+                          "cta": {
+                            "$ref": "#/definitions/link"
+                          }
+                        },
+                        "required": ["id", "title", "description", "meta"]
+                      },
+                      "maxItems": 100
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "anchor",
+                    "type",
+                    "hidden",
+                    "variant",
+                    "eyebrow",
+                    "title",
+                    "items"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "id": {
+                      "$ref": "#/definitions/id"
+                    },
+                    "anchor": {
+                      "$ref": "#/definitions/id"
+                    },
+                    "type": {
+                      "const": "gallery"
+                    },
+                    "appearance": {
+                      "$ref": "#/definitions/appearance"
+                    },
+                    "hidden": {
+                      "type": "boolean"
+                    },
+                    "design": {
+                      "$ref": "#/definitions/design"
+                    },
+                    "variant": {
+                      "enum": ["uniformGrid", "collage", "strip"]
+                    },
+                    "eyebrow": {
+                      "$ref": "#/definitions/shortText"
+                    },
+                    "title": {
+                      "$ref": "#/definitions/label"
+                    },
+                    "description": {
+                      "$ref": "#/definitions/longText"
+                    },
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "properties": {
+                          "id": {
+                            "$ref": "#/definitions/id"
+                          },
+                          "image": {
+                            "$ref": "#/definitions/media"
+                          },
+                          "caption": {
+                            "$ref": "#/definitions/shortText"
+                          }
+                        },
+                        "required": ["id", "image"]
+                      },
+                      "maxItems": 100
+                    },
+                    "lightboxEnabled": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "anchor",
+                    "type",
+                    "hidden",
+                    "variant",
+                    "eyebrow",
+                    "title",
+                    "description",
+                    "items",
+                    "lightboxEnabled"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "id": {
+                      "$ref": "#/definitions/id"
+                    },
+                    "anchor": {
+                      "$ref": "#/definitions/id"
+                    },
+                    "type": {
+                      "const": "testimonials"
+                    },
+                    "appearance": {
+                      "$ref": "#/definitions/appearance"
+                    },
+                    "hidden": {
+                      "type": "boolean"
+                    },
+                    "design": {
+                      "$ref": "#/definitions/design"
+                    },
+                    "variant": {
+                      "enum": ["cards", "featuredQuote", "compactList"]
+                    },
+                    "eyebrow": {
+                      "$ref": "#/definitions/shortText"
+                    },
+                    "title": {
+                      "$ref": "#/definitions/label"
+                    },
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "properties": {
+                          "id": {
+                            "$ref": "#/definitions/id"
+                          },
+                          "quote": {
+                            "$ref": "#/definitions/longText"
+                          },
+                          "author": {
+                            "$ref": "#/definitions/label"
+                          },
+                          "role": {
+                            "$ref": "#/definitions/shortText"
+                          },
+                          "avatar": {
+                            "$ref": "#/definitions/media"
+                          },
+                          "rating": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "maximum": 5
+                          }
+                        },
+                        "required": ["id", "quote", "author", "role", "rating"]
+                      },
+                      "maxItems": 100
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "anchor",
+                    "type",
+                    "hidden",
+                    "variant",
+                    "eyebrow",
+                    "title",
+                    "items"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "id": {
+                      "$ref": "#/definitions/id"
+                    },
+                    "anchor": {
+                      "$ref": "#/definitions/id"
+                    },
+                    "type": {
+                      "const": "faq"
+                    },
+                    "appearance": {
+                      "$ref": "#/definitions/appearance"
+                    },
+                    "hidden": {
+                      "type": "boolean"
+                    },
+                    "design": {
+                      "$ref": "#/definitions/design"
+                    },
+                    "variant": {
+                      "enum": ["borderedAccordion", "separatedList", "twoColumns"]
+                    },
+                    "eyebrow": {
+                      "$ref": "#/definitions/shortText"
+                    },
+                    "title": {
+                      "$ref": "#/definitions/label"
+                    },
+                    "description": {
+                      "$ref": "#/definitions/longText"
+                    },
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "properties": {
+                          "id": {
+                            "$ref": "#/definitions/id"
+                          },
+                          "question": {
+                            "$ref": "#/definitions/label"
+                          },
+                          "answer": {
+                            "$ref": "#/definitions/longText"
+                          },
+                          "initiallyOpen": {
+                            "type": "boolean"
+                          }
+                        },
+                        "required": ["id", "question", "answer", "initiallyOpen"]
+                      },
+                      "maxItems": 100
+                    },
+                    "allowMultipleOpen": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "anchor",
+                    "type",
+                    "hidden",
+                    "variant",
+                    "eyebrow",
+                    "title",
+                    "description",
+                    "items",
+                    "allowMultipleOpen"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "id": {
+                      "$ref": "#/definitions/id"
+                    },
+                    "anchor": {
+                      "$ref": "#/definitions/id"
+                    },
+                    "type": {
+                      "const": "callToAction"
+                    },
+                    "appearance": {
+                      "$ref": "#/definitions/appearance"
+                    },
+                    "hidden": {
+                      "type": "boolean"
+                    },
+                    "design": {
+                      "$ref": "#/definitions/design"
+                    },
+                    "variant": {
+                      "enum": ["banner", "split", "cover"]
+                    },
+                    "eyebrow": {
+                      "$ref": "#/definitions/shortText"
+                    },
+                    "title": {
+                      "$ref": "#/definitions/label"
+                    },
+                    "text": {
+                      "$ref": "#/definitions/longText"
+                    },
+                    "primaryAction": {
+                      "$ref": "#/definitions/link"
+                    },
+                    "secondaryAction": {
+                      "$ref": "#/definitions/link"
+                    },
+                    "media": {
+                      "$ref": "#/definitions/media"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "anchor",
+                    "type",
+                    "hidden",
+                    "variant",
+                    "eyebrow",
+                    "title",
+                    "text",
+                    "primaryAction"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "id": {
+                      "$ref": "#/definitions/id"
+                    },
+                    "anchor": {
+                      "$ref": "#/definitions/id"
+                    },
+                    "type": {
+                      "const": "leadForm"
+                    },
+                    "appearance": {
+                      "$ref": "#/definitions/appearance"
+                    },
+                    "hidden": {
+                      "type": "boolean"
+                    },
+                    "design": {
+                      "$ref": "#/definitions/design"
+                    },
+                    "title": {
+                      "$ref": "#/definitions/label"
+                    },
+                    "description": {
+                      "$ref": "#/definitions/longText"
+                    },
+                    "submitText": {
+                      "$ref": "#/definitions/label"
+                    },
+                    "submitAppearance": {
+                      "$ref": "#/definitions/buttonAppearance"
+                    },
+                    "successMessage": {
+                      "$ref": "#/definitions/longText"
+                    },
+                    "fields": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "properties": {
+                          "id": {
+                            "$ref": "#/definitions/id"
+                          },
+                          "label": {
+                            "$ref": "#/definitions/label"
+                          },
+                          "type": {
+                            "enum": ["text", "email", "tel", "textarea"]
+                          },
+                          "placeholder": {
+                            "$ref": "#/definitions/label"
+                          },
+                          "required": {
+                            "type": "boolean"
+                          },
+                          "helpText": {
+                            "$ref": "#/definitions/shortText"
+                          },
+                          "order": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 100
+                          }
+                        },
+                        "required": ["id", "label", "type", "placeholder", "required", "order"]
+                      },
+                      "maxItems": 32
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "anchor",
+                    "type",
+                    "hidden",
+                    "title",
+                    "description",
+                    "submitText",
+                    "successMessage",
+                    "fields"
+                  ]
+                }
+              ]
+            },
+            "maxItems": 100
+          }
+        },
+        "required": ["id", "slug", "title", "seo", "blocks"]
+      },
+      "maxItems": 50,
+      "minItems": 1
+    }
+  },
+  "required": ["id", "schemaVersion", "name", "theme", "business", "seo", "chrome", "pages"],
+  "definitions": {
+    "id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "pattern": "^[^\\u0000-\\u001f\\u007f]+$"
+    },
+    "slug": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+    },
+    "shortText": {
+      "type": "string",
+      "minLength": 0,
+      "maxLength": 256
+    },
+    "label": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 256
+    },
+    "longText": {
+      "type": "string",
+      "minLength": 0,
+      "maxLength": 10000
+    },
+    "url": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 2048
+    },
+    "color": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 256
+    },
+    "media": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "src": {
+          "$ref": "#/definitions/url"
+        },
+        "alt": {
+          "$ref": "#/definitions/shortText"
+        },
+        "focalPoint": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "x": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 100
+            },
+            "y": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 100
+            }
+          },
+          "required": ["x", "y"]
+        }
+      },
+      "required": ["src", "alt"]
+    },
+    "buttonAppearance": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "variant": {
+          "enum": ["filled", "outline", "ghost"]
+        },
+        "backgroundColor": {
+          "$ref": "#/definitions/color"
+        },
+        "textColor": {
+          "$ref": "#/definitions/color"
+        },
+        "borderColor": {
+          "$ref": "#/definitions/color"
+        }
+      },
+      "required": ["variant", "backgroundColor", "textColor", "borderColor"]
+    },
+    "link": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "$ref": "#/definitions/id"
+        },
+        "label": {
+          "$ref": "#/definitions/label"
+        },
+        "target": {
+          "$ref": "#/definitions/url"
+        },
+        "kind": {
+          "enum": ["anchor", "internal", "external", "email", "phone"]
+        },
+        "openInNewTab": {
+          "type": "boolean"
+        },
+        "appearance": {
+          "$ref": "#/definitions/buttonAppearance"
+        }
+      },
+      "required": ["id", "label", "target", "kind", "openInNewTab"]
+    },
+    "appearance": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "backgroundColor": {
+          "$ref": "#/definitions/color"
+        },
+        "textColor": {
+          "$ref": "#/definitions/color"
+        },
+        "accentColor": {
+          "$ref": "#/definitions/color"
+        },
+        "contentWidth": {
+          "enum": ["narrow", "wide", "full"]
+        },
+        "spacing": {
+          "enum": ["compact", "balanced", "spacious"]
+        },
+        "radius": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 32
+        },
+        "fontPairing": {
+          "enum": ["grotesk", "serif", "rounded", "geometric", "humanist", "mono"]
+        }
+      },
+      "required": []
+    },
+    "design": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "accentColor": {
+          "oneOf": [
+            {
+              "enum": [
+                "teal",
+                "blue",
+                "rose",
+                "violet",
+                "amber",
+                "indigo",
+                "cyan",
+                "emerald",
+                "orange",
+                "magenta"
+              ]
+            },
+            {
+              "type": "string",
+              "pattern": "^#[0-9a-fA-F]{6}$",
+              "maxLength": 7
+            }
+          ]
+        },
+        "fontPairing": {
+          "enum": ["grotesk", "serif", "rounded", "geometric", "humanist", "mono"]
+        },
+        "density": {
+          "enum": ["compact", "balanced", "spacious"]
+        },
+        "templateStyle": {
+          "enum": ["classic", "editorial", "conversion"]
+        }
+      },
+      "required": ["accentColor", "fontPairing", "density", "templateStyle"]
+    },
+    "header": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "$ref": "#/definitions/id"
+        },
+        "anchor": {
+          "$ref": "#/definitions/id"
+        },
+        "type": {
+          "const": "siteHeader"
+        },
+        "appearance": {
+          "$ref": "#/definitions/appearance"
+        },
+        "hidden": {
+          "type": "boolean"
+        },
+        "design": {
+          "$ref": "#/definitions/design"
+        },
+        "inheritBusiness": {
+          "type": "boolean"
+        },
+        "variant": {
+          "enum": [
+            "centeredHero",
+            "splitMedia",
+            "reservationBar",
+            "editorial",
+            "burgerMenu",
+            "stretchedNav"
+          ]
+        },
+        "brandName": {
+          "$ref": "#/definitions/label"
+        },
+        "logo": {
+          "$ref": "#/definitions/media"
+        },
+        "navigationItems": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/link"
+          },
+          "maxItems": 100
+        },
+        "cta": {
+          "$ref": "#/definitions/link"
+        },
+        "booking": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "dateLabel": {
+              "$ref": "#/definitions/label"
+            },
+            "partySizeLabel": {
+              "$ref": "#/definitions/label"
+            },
+            "action": {
+              "$ref": "#/definitions/link"
+            }
+          },
+          "required": ["dateLabel", "partySizeLabel", "action"]
+        }
+      },
+      "required": [
+        "id",
+        "anchor",
+        "type",
+        "hidden",
+        "inheritBusiness",
+        "variant",
+        "brandName",
+        "navigationItems",
+        "cta"
+      ]
+    },
+    "footer": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "$ref": "#/definitions/id"
+        },
+        "anchor": {
+          "$ref": "#/definitions/id"
+        },
+        "type": {
+          "const": "siteFooter"
+        },
+        "appearance": {
+          "$ref": "#/definitions/appearance"
+        },
+        "hidden": {
+          "type": "boolean"
+        },
+        "design": {
+          "$ref": "#/definitions/design"
+        },
+        "inheritBusiness": {
+          "type": "boolean"
+        },
+        "variant": {
+          "enum": ["contactMap", "compactLegal", "socialLead", "bookingFooter"]
+        },
+        "brandName": {
+          "$ref": "#/definitions/label"
+        },
+        "logo": {
+          "$ref": "#/definitions/media"
+        },
+        "cta": {
+          "$ref": "#/definitions/link"
+        },
+        "contactLines": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/shortText"
+          },
+          "maxItems": 100
+        },
+        "links": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/link"
+          },
+          "maxItems": 100
+        },
+        "socialLinks": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/link"
+          },
+          "maxItems": 100
+        },
+        "map": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "label": {
+              "$ref": "#/definitions/label"
+            },
+            "address": {
+              "$ref": "#/definitions/shortText"
+            },
+            "embedUrl": {
+              "$ref": "#/definitions/url"
+            }
+          },
+          "required": ["label", "address", "embedUrl"]
+        }
+      },
+      "required": [
+        "id",
+        "anchor",
+        "type",
+        "hidden",
+        "inheritBusiness",
+        "variant",
+        "brandName",
+        "cta",
+        "contactLines",
+        "links"
+      ]
+    }
+  }
+}

@@ -19,6 +19,7 @@
     "start:prod": "node dist/main",
     "lint": "eslint \"src/**/*.ts\" \"test/**/*.ts\" --max-warnings=0",
     "architecture": "jest --runInBand --testPathPatterns=test/architecture",
+    "test:contract": "jest --runInBand --testRegex=.*\\\\.contract\\\\.ts$",
     "test": "node --require argon2 --experimental-vm-modules node_modules/jest/bin/jest.js --runInBand --testPathPatterns=src/ --passWithNoTests",
     "test:watch": "jest --watch",
     "test:cov": "jest --coverage",
@@ -26,7 +27,7 @@
     "test:e2e": "node --require argon2 --experimental-vm-modules node_modules/jest/bin/jest.js --config ./test/jest-e2e.json --runInBand",
     "prisma:generate": "prisma generate",
     "preverify": "npm run prisma:generate",
-    "verify": "npm run lint && npm run architecture && npm run test && npm run test:e2e && npm run build && npm run format:check"
+    "verify": "npm run lint && npm run architecture && npm run test:contract && npm run test && npm run test:e2e && npm run build && npm run format:check"
   },
   "dependencies": {
     "@nestjs/common": "^11.0.1",
@@ -34,6 +35,7 @@
     "@nestjs/platform-express": "^11.0.1",
     "@prisma/adapter-pg": "^7.9.1",
     "@prisma/client": "^7.9.1",
+    "ajv": "^8.18.0",
     "argon2": "0.45.1",
     "pg": "^8.22.0",
     "reflect-metadata": "^0.2.2",

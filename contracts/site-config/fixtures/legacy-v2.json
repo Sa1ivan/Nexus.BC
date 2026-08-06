@@ -1,0 +1,111 @@
+{
+  "id": "site-contract",
+  "schemaVersion": 2,
+  "name": "Legacy v2 fixture",
+  "theme": {
+    "pageBackground": "#ffffff",
+    "surfaceColor": "#f5f7fb",
+    "textColor": "#111827",
+    "mutedTextColor": "#5f6b7a",
+    "accentColor": "#0a7f72",
+    "fontPairing": "grotesk",
+    "typeScale": "balanced",
+    "contentWidth": "wide",
+    "sectionSpacing": "balanced",
+    "buttonShape": "rounded",
+    "radius": 8
+  },
+  "business": {
+    "brandName": "Nexus Studio",
+    "logo": null,
+    "phone": "+7 999 000-00-00",
+    "email": "hello@nexus.app",
+    "address": "",
+    "hours": "",
+    "messengers": [],
+    "socialLinks": []
+  },
+  "seo": {
+    "title": "Legacy v2 title",
+    "description": "Legacy v2 description",
+    "language": "en",
+    "socialImage": {
+      "src": "https://cdn.example.com/social.png",
+      "alt": "Legacy social image"
+    },
+    "favicon": {
+      "src": "https://cdn.example.com/favicon.png",
+      "alt": "Legacy favicon"
+    }
+  },
+  "pages": [
+    {
+      "id": "page-home",
+      "slug": "home",
+      "title": "Главная",
+      "blocks": [
+        {
+          "id": "hero-home",
+          "anchor": "hero",
+          "type": "hero",
+          "appearance": {},
+          "hidden": false,
+          "design": {
+            "accentColor": "teal",
+            "fontPairing": "grotesk",
+            "density": "balanced",
+            "templateStyle": "classic"
+          },
+          "title": "Соберите сайт быстрее",
+          "subtitle": "Contract subtitle",
+          "buttonText": "Начать",
+          "buttonHref": "#lead-form",
+          "media": {
+            "src": "https://images.unsplash.com/photo-1497366754035-f200968a6e72?auto=format&fit=crop&w=1200&q=80",
+            "alt": "Рабочая зона",
+            "focalPoint": {
+              "x": 50,
+              "y": 50
+            }
+          },
+          "styles": {
+            "backgroundColor": "#f5f7fb",
+            "textColor": "#111827",
+            "minHeight": "520px",
+            "alignment": "center",
+            "buttonBackgroundColor": "#2563eb",
+            "buttonTextColor": "#ffffff"
+          }
+        },
+        {
+          "id": "lead-form-home",
+          "anchor": "lead-form",
+          "type": "leadForm",
+          "appearance": {},
+          "hidden": false,
+          "design": {
+            "accentColor": "teal",
+            "fontPairing": "grotesk",
+            "density": "balanced",
+            "templateStyle": "classic"
+          },
+          "title": "Оставьте заявку",
+          "description": "Расскажите о задаче",
+          "submitText": "Отправить",
+          "successMessage": "Заявка сохранена",
+          "fields": [
+            {
+              "id": "name",
+              "label": "Имя",
+              "type": "text",
+              "placeholder": "Ваше имя",
+              "required": true,
+              "helpText": "",
+              "order": 1
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
