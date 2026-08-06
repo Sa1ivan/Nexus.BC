@@ -42,6 +42,54 @@ model Workspace {
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
   memberships Membership[]
+  projects    Project[]
+}
+
+model Project {
+  id                 String            @id @default(uuid()) @db.Uuid
+  workspaceId        String            @db.Uuid
+  createOperationId  String
+  name               String
+  publicSlug         String            @unique
+  draft              Json
+  draftSchemaVersion Int
+  draftVersion       Int               @default(1)
+  createdAt          DateTime          @default(now())
+  updatedAt          DateTime          @updatedAt
+  workspace          Workspace         @relation(fields: [workspaceId], references: [id], onDelete: Restrict)
+  revisions          ProjectRevision[]
+
+  @@unique([workspaceId, createOperationId])
+  @@index([workspaceId, updatedAt])
+}
+
+model ProjectRevision {
+  id            String   @id @default(uuid()) @db.Uuid
+  projectId     String   @db.Uuid
+  operationId   String
+  version       Int
+  siteConfig    Json
+  schemaVersion Int
+  createdAt     DateTime @default(now())
+  project       Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, version])
+  @@unique([projectId, operationId])
+}
+
+model IdempotencyRecord {
+  scope              String
+  operation          String
+  key                String
+  requestFingerprint String
+  httpStatus         Int
+  responseBody       Json
+  resourceId         String?
+  createdAt          DateTime @default(now())
+  completedAt        DateTime @default(now())
+
+  @@id([scope, operation, key])
+  @@index([resourceId])
 }
 
 model Membership {
