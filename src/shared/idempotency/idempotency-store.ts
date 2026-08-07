@@ -55,6 +55,10 @@ export interface StoredIdempotencyRecord extends NewIdempotencyRecord {
 }
 
 export interface IdempotencyRecordStore {
+  acquireLock(
+    context: TransactionContext,
+    key: IdempotencyRecordKey,
+  ): Promise<void>;
   read(
     context: TransactionContext,
     key: IdempotencyRecordKey,

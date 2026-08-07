@@ -79,6 +79,11 @@ export interface SiteRepositoryContract {
     workspaceId: string,
     projectId: string,
   ): Promise<StoredProject | null>;
+  findRevisionForWorkspace(
+    workspaceId: string,
+    projectId: string,
+    version: number,
+  ): Promise<StoredProjectRevision | null>;
   saveDraft(
     context: TransactionContext,
     input: SaveDraftRecord,
@@ -286,6 +291,25 @@ export function defineSiteRepositoryContract(
         operationId: input.operationId,
         siteConfig: input.siteConfig,
       });
+      await expect(
+        driver.repository.findRevisionForWorkspace(workspaceId, project.id, 1),
+      ).resolves.toMatchObject({
+        version: 1,
+        siteConfig: input.siteConfig,
+      });
+      await expect(
+        driver.repository.findRevisionForWorkspace(workspaceId, project.id, 2),
+      ).resolves.toMatchObject({
+        version: 2,
+        siteConfig: secondDocument,
+      });
+      await expect(
+        driver.repository.findRevisionForWorkspace(
+          otherWorkspaceId,
+          project.id,
+          1,
+        ),
+      ).resolves.toBeNull();
     });
 
     it('rejects a repeated revision operation without mutating the project', async () => {

@@ -4,6 +4,7 @@ import { AUDIT_WRITER } from '../audit/audit-writer';
 import { AppConfigModule } from '../config/app-config.module';
 import { APP_CONFIG } from '../config/app-config.schema';
 import { IDEMPOTENCY_STORE } from '../idempotency/idempotency-store';
+import { IdempotencyCoordinator } from '../idempotency/idempotency-coordinator';
 import { PrismaIdempotencyAdapter } from '../idempotency/prisma-idempotency.adapter';
 import { DATABASE_READINESS } from './database-readiness';
 import { createPrismaService, PrismaClientService } from './prisma.service';
@@ -21,6 +22,7 @@ import { TransactionRunner } from './transaction-runner';
     TransactionRunner,
     PrismaAuditWriter,
     PrismaIdempotencyAdapter,
+    IdempotencyCoordinator,
     { provide: AUDIT_WRITER, useExisting: PrismaAuditWriter },
     { provide: IDEMPOTENCY_STORE, useExisting: PrismaIdempotencyAdapter },
     { provide: DATABASE_READINESS, useExisting: PrismaClientService },
@@ -30,6 +32,7 @@ import { TransactionRunner } from './transaction-runner';
     TransactionRunner,
     AUDIT_WRITER,
     IDEMPOTENCY_STORE,
+    IdempotencyCoordinator,
     DATABASE_READINESS,
   ],
 })
