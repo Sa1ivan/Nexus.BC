@@ -458,6 +458,25 @@ describe('idempotency hashing and advisory-lock contracts', () => {
     expect(source).toMatch(/\btimingSafeEqual\b/u);
     expect(source).not.toMatch(/(?:digest|expected|supplied)\s*===/u);
   });
+
+  it('rejects lone UTF-16 surrogates that RFC 8785 excludes from canonical JSON', () => {
+    const modulePath = '../../src/shared/idempotency/request-fingerprint';
+    const loaded = jest.requireActual<{
+      readonly createRequestFingerprint?: (
+        request: unknown,
+        activeVersion: number,
+        keyring: ReadonlyMap<number, Buffer>,
+      ) => string;
+    }>(modulePath);
+    const keys = new Map([[1, Buffer.alloc(32, 1)]]);
+
+    expect(() =>
+      loaded.createRequestFingerprint?.({ value: '\ud800' }, 1, keys),
+    ).toThrow(/unicode|surrogate/iu);
+    expect(() =>
+      loaded.createRequestFingerprint?.({ ['\udc00']: true }, 1, keys),
+    ).toThrow(/unicode|surrogate/iu);
+  });
 });
 
 defineSiteRepositoryContract('in-memory', inMemoryDriver);

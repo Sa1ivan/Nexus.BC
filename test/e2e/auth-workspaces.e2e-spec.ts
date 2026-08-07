@@ -130,6 +130,8 @@ async function createApplication(
 }
 
 async function resetDatabase(pool: Pool): Promise<void> {
+  await pool.query('DELETE FROM "IdempotencyRecord"');
+  await pool.query('DELETE FROM "Project"');
   await pool.query('DELETE FROM "Outbox"');
   await pool.query('DELETE FROM "Membership"');
   await pool.query('DELETE FROM "Workspace"');

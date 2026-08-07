@@ -19,7 +19,7 @@
     "start:prod": "node dist/main",
     "lint": "eslint \"src/**/*.ts\" \"test/**/*.ts\" --max-warnings=0",
     "architecture": "jest --runInBand --testPathPatterns=test/architecture",
-    "test:contract": "jest --runInBand --testRegex=.*\\\\.contract\\\\.ts$",
+    "test:contract": "node --require argon2 --experimental-vm-modules node_modules/jest/bin/jest.js --runInBand --testRegex=.*\\\\.contract\\\\.ts$",
     "test": "node --require argon2 --experimental-vm-modules node_modules/jest/bin/jest.js --runInBand --testPathPatterns=src/ --passWithNoTests",
     "test:watch": "jest --watch",
     "test:cov": "jest --coverage",

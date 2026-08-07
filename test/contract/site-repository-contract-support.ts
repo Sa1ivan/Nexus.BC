@@ -195,7 +195,7 @@ export function defineSiteRepositoryContract(
     });
 
     it('hides reads, revisions, summaries, and writes from another workspace', async () => {
-      const { project } = await createProject(driver, workspaceId);
+      const { input, project } = await createProject(driver, workspaceId);
 
       await expect(
         driver.repository.findForWorkspace(otherWorkspaceId, project.id),
@@ -217,6 +217,17 @@ export function defineSiteRepositoryContract(
         }),
       );
       expect(saveResult).toEqual({ kind: 'not-found' });
+
+      const saveWithKnownOperation = await driver.transact((context) =>
+        driver.repository.saveDraft(context, {
+          workspaceId: otherWorkspaceId,
+          projectId: project.id,
+          operationId: input.operationId,
+          expectedDraftVersion: 1,
+          siteConfig: siteConfig('foreign-known-operation'),
+        }),
+      );
+      expect(saveWithKnownOperation).toEqual({ kind: 'not-found' });
 
       await expect(
         driver.repository.findForWorkspace(workspaceId, project.id),
