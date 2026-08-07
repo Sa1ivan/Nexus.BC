@@ -80,6 +80,11 @@ export interface SiteRepository {
     workspaceId: string,
     projectId: string,
   ): Promise<StoredProject | null>;
+  findRevisionForWorkspace(
+    workspaceId: string,
+    projectId: string,
+    version: number,
+  ): Promise<StoredProjectRevision | null>;
   saveDraft(
     context: TransactionContext,
     input: SaveDraftRecord,

@@ -17,6 +17,7 @@ import type {
   StoredProject,
   StoredProjectRevision,
 } from '../application/sites.ports';
+import { InvalidSiteCursorError } from '../application/sites-errors';
 
 interface ProjectRow {
   readonly id: string;
@@ -59,6 +60,9 @@ interface SitePrismaClient {
     ): Promise<SummaryRow[]>;
   };
   readonly projectRevision: {
+    findFirst(
+      arguments_: Readonly<Record<string, unknown>>,
+    ): Promise<RevisionRow | null>;
     findMany(
       arguments_: Readonly<Record<string, unknown>>,
     ): Promise<RevisionRow[]>;
@@ -163,9 +167,9 @@ function decodeCursor(cursor: string): Record<string, unknown> {
   try {
     parsed = JSON.parse(Buffer.from(cursor, 'base64url').toString('utf8'));
   } catch {
-    throw new Error('invalid cursor');
+    throw new InvalidSiteCursorError();
   }
-  if (!isRecord(parsed)) throw new Error('invalid cursor');
+  if (!isRecord(parsed)) throw new InvalidSiteCursorError();
   return parsed;
 }
 
@@ -180,7 +184,7 @@ function revisionCursor(cursor: string | undefined): RevisionCursor | null {
     typeof parsed['id'] !== 'string' ||
     parsed['id'].length === 0
   ) {
-    throw new Error('invalid revision cursor');
+    throw new InvalidSiteCursorError();
   }
   return {
     kind: 'revision',
@@ -201,7 +205,7 @@ function summaryCursor(cursor: string | undefined): SummaryCursor | null {
     typeof parsed['id'] !== 'string' ||
     parsed['id'].length === 0
   ) {
-    throw new Error('invalid summary cursor');
+    throw new InvalidSiteCursorError();
   }
   return {
     kind: 'summary',
@@ -273,6 +277,17 @@ export class PrismaSiteRepository implements SiteRepository {
       where: { id: projectId, workspaceId },
     });
     return project === null ? null : storedProject(project);
+  }
+
+  async findRevisionForWorkspace(
+    workspaceId: string,
+    projectId: string,
+    version: number,
+  ): Promise<StoredProjectRevision | null> {
+    const revision = await this.prisma.projectRevision.findFirst({
+      where: { projectId, version, project: { workspaceId } },
+    });
+    return revision === null ? null : storedRevision(revision);
   }
 
   async saveDraft(

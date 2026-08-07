@@ -156,6 +156,21 @@ class InMemorySiteRepository implements SiteRepositoryContract {
     );
   }
 
+  findRevisionForWorkspace(
+    workspaceId: string,
+    projectId: string,
+    version: number,
+  ): Promise<StoredProjectRevision | null> {
+    const project = this.projects.get(projectId);
+    if (project?.workspaceId !== workspaceId) return Promise.resolve(null);
+    const revision = this.revisions
+      .get(projectId)
+      ?.find((candidate) => candidate.version === version);
+    return Promise.resolve(
+      revision === undefined ? null : cloneRevision(revision),
+    );
+  }
+
   saveDraft(
     _context: TransactionContext,
     input: SaveDraftRecord,
@@ -262,6 +277,7 @@ function missingPrismaRepository(): SiteRepositoryContract {
   return {
     create: missing,
     findForWorkspace: missing,
+    findRevisionForWorkspace: missing,
     saveDraft: missing,
     listRevisions: missing,
     listProjectSummaries: missing,

@@ -12,6 +12,7 @@ import {
   type StoredIdempotencyRecord,
   versionedRequestFingerprint,
 } from './idempotency-store';
+import { idempotencyAdvisoryLockId } from './idempotency-lock';
 
 const responseStringFields = new Set([
   'code',
@@ -36,6 +37,10 @@ const responseFields = new Set([
 ]);
 
 interface IdempotencyTransactionClient {
+  $executeRawUnsafe(
+    statement: string,
+    ...values: readonly unknown[]
+  ): Promise<number>;
   readonly idempotencyRecord: {
     findUnique(arguments_: {
       readonly where: {
@@ -108,6 +113,22 @@ function copyStoredRecord(
 @Injectable()
 export class PrismaIdempotencyAdapter implements IdempotencyRecordStore {
   constructor(private readonly transactions: TransactionRunner) {}
+
+  async acquireLock(
+    context: TransactionContext,
+    key: IdempotencyRecordKey,
+  ): Promise<void> {
+    await this.transactions[PrismaTransactionClientService](
+      context,
+      async (client) => {
+        const transaction = client as IdempotencyTransactionClient;
+        await transaction.$executeRawUnsafe(
+          'SELECT pg_advisory_xact_lock($1::bigint)',
+          idempotencyAdvisoryLockId(key).toString(),
+        );
+      },
+    );
+  }
 
   async read(
     context: TransactionContext,

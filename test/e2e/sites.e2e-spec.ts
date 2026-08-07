@@ -601,7 +601,7 @@ describe('authenticated sites drafts HTTP contract', () => {
       id,
       operationId,
       1,
-      fixture('v4-full-valid.json'),
+      fixture('v4-minimal-valid.json'),
     ).expect(409);
 
     expect(errorCode(reused)).toBe('IDEMPOTENCY_KEY_REUSED');
@@ -766,6 +766,22 @@ describe('authenticated sites drafts HTTP contract', () => {
       .set(authorize(owner))
       .expect(400);
     expect(errorCode(invalidLimit)).toBe('VALIDATION_ERROR');
+
+    const invalidSummaryCursor = await request(app.getHttpServer())
+      .get(`/v1/workspaces/${owner.workspaceId}/projects?cursor=not-a-cursor`)
+      .set(authorize(owner))
+      .expect(400);
+    expect(errorCode(invalidSummaryCursor)).toBe('VALIDATION_ERROR');
+
+    const invalidRevisionCursor = await request(app.getHttpServer())
+      .get(
+        `/v1/workspaces/${owner.workspaceId}/projects/${projectId(
+          second,
+        )}/revisions?cursor=not-a-cursor`,
+      )
+      .set(authorize(owner))
+      .expect(400);
+    expect(errorCode(invalidRevisionCursor)).toBe('VALIDATION_ERROR');
   });
 
   it('replays records across HMAC key rotation and fails closed when the stored key version is unavailable', async () => {
