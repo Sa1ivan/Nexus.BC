@@ -12,6 +12,7 @@ import type {
   CursorInput,
   CursorPage,
   ProjectSummary,
+  PublicReleaseSnapshot,
   PublishProjectRecord,
   PublishProjectResult,
   SaveDraftRecord,
@@ -71,6 +72,19 @@ interface ActiveReleaseRow {
   readonly activatedAt: Date;
 }
 
+interface PublicReleaseRow {
+  readonly id: string;
+  readonly version: number;
+  readonly siteConfig: unknown;
+  readonly schemaVersion: number;
+}
+
+interface PublicReleaseProjectRow {
+  readonly activeRelease: {
+    readonly release: PublicReleaseRow;
+  } | null;
+}
+
 interface SitePrismaClient {
   readonly project: {
     findFirst(
@@ -79,6 +93,9 @@ interface SitePrismaClient {
     findMany(
       arguments_: Readonly<Record<string, unknown>>,
     ): Promise<SummaryRow[]>;
+    findUnique(
+      arguments_: Readonly<Record<string, unknown>>,
+    ): Promise<PublicReleaseProjectRow | null>;
   };
   readonly projectRevision: {
     findFirst(
@@ -182,6 +199,15 @@ function storedRelease(row: ReleaseRow): Release {
     siteConfig: siteConfigDocument(row.siteConfig),
     schemaVersion: schemaVersion(row.schemaVersion),
     publishedAt: row.publishedAt,
+  };
+}
+
+function storedPublicRelease(row: PublicReleaseRow): PublicReleaseSnapshot {
+  return {
+    id: row.id,
+    version: row.version,
+    siteConfig: siteConfigDocument(row.siteConfig),
+    schemaVersion: schemaVersion(row.schemaVersion),
   };
 }
 
@@ -349,6 +375,30 @@ export class PrismaSiteRepository implements SiteRepository {
       },
     });
     return release === null ? null : storedRelease(release);
+  }
+
+  async findActiveReleaseByPublicSlug(
+    publicSlug: string,
+  ): Promise<PublicReleaseSnapshot | null> {
+    const project = await this.prisma.project.findUnique({
+      where: { publicSlug },
+      select: {
+        activeRelease: {
+          select: {
+            release: {
+              select: {
+                id: true,
+                version: true,
+                siteConfig: true,
+                schemaVersion: true,
+              },
+            },
+          },
+        },
+      },
+    });
+    const release = project?.activeRelease?.release;
+    return release === undefined ? null : storedPublicRelease(release);
   }
 
   async saveDraft(

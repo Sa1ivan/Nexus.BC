@@ -9,9 +9,10 @@ import {
   Put,
   Query,
   Req,
+  Res,
   UseInterceptors,
 } from '@nestjs/common';
-import type { Request } from 'express';
+import type { Request, Response } from 'express';
 import {
   APP_CONFIG,
   type AppConfig,
@@ -29,15 +30,18 @@ import {
   requireAllowedOrigin,
   throwRequestValidationError,
 } from '../../../shared/http/request-contract';
+import { ensureResponseRequestId } from '../../../shared/http/request-id.middleware';
 import {
   AUTHENTICATED_PRINCIPAL,
   type AuthenticatedPrincipal,
 } from '../../auth/application/public';
 import { CreateProject } from '../application/create-project';
+import { ActivateRelease } from '../application/activate-release';
 import { GetProject } from '../application/get-project';
 import { ListProjectRevisions } from '../application/list-project-revisions';
 import { ListProjectSummaries } from '../application/list-project-summaries';
 import { SaveProjectDraft } from '../application/save-project-draft';
+import { PublishProject } from '../application/publish-project';
 import { SitesApplicationErrorInterceptor } from './sites-application-error.interceptor';
 
 type AuthenticatedRequest = Request & {
@@ -53,6 +57,8 @@ export class SitesController {
     private readonly saveProjectDraft: SaveProjectDraft,
     private readonly listProjectSummaries: ListProjectSummaries,
     private readonly listProjectRevisions: ListProjectRevisions,
+    private readonly publishProject: PublishProject,
+    private readonly activateRelease: ActivateRelease,
     @Inject(APP_CONFIG) private readonly configuration: AppConfig,
   ) {}
 
@@ -171,6 +177,83 @@ export class SitesController {
       operationId,
       expectedDraftVersion: Number(expectedDraftVersion),
       siteConfig: input['siteConfig'],
+    });
+  }
+
+  @Post(':projectId/publish')
+  @HttpCode(200)
+  async publish(
+    @Param('workspaceId') workspaceId: string,
+    @Param('projectId') projectId: string,
+    @Body() body: unknown,
+    @Req() request: AuthenticatedRequest,
+    @Res({ passthrough: true }) response: Response,
+  ) {
+    const actor = request[AUTHENTICATED_PRINCIPAL];
+    if (actor === undefined) {
+      throw createApiHttpException(
+        401,
+        'AUTHENTICATION_REQUIRED',
+        'Authentication required',
+      );
+    }
+    requireUuidPath(workspaceId);
+    requireUuidPath(projectId);
+    requireValidClientCapabilities(request);
+    requireAllowedOrigin(request, this.configuration.webOrigins);
+    const operationId = requireIdempotencyKey(request);
+    const input = exactRequestBody(body, [
+      'expectedDraftVersion',
+      'siteConfig',
+    ]);
+    const expectedDraftVersion = input['expectedDraftVersion'];
+    if (
+      !Number.isSafeInteger(expectedDraftVersion) ||
+      Number(expectedDraftVersion) < 1
+    ) {
+      throwRequestValidationError();
+    }
+    return this.publishProject.execute({
+      workspaceId,
+      projectId,
+      userId: actor.userId,
+      operationId,
+      requestId: ensureResponseRequestId(response),
+      expectedDraftVersion: Number(expectedDraftVersion),
+      siteConfig: input['siteConfig'],
+    });
+  }
+
+  @Post(':projectId/releases/:releaseId/activate')
+  @HttpCode(200)
+  async activate(
+    @Param('workspaceId') workspaceId: string,
+    @Param('projectId') projectId: string,
+    @Param('releaseId') releaseId: string,
+    @Req() request: AuthenticatedRequest,
+    @Res({ passthrough: true }) response: Response,
+  ) {
+    const actor = request[AUTHENTICATED_PRINCIPAL];
+    if (actor === undefined) {
+      throw createApiHttpException(
+        401,
+        'AUTHENTICATION_REQUIRED',
+        'Authentication required',
+      );
+    }
+    requireUuidPath(workspaceId);
+    requireUuidPath(projectId);
+    requireUuidPath(releaseId);
+    requireValidClientCapabilities(request);
+    requireAllowedOrigin(request, this.configuration.webOrigins);
+    const operationId = requireIdempotencyKey(request);
+    return this.activateRelease.execute({
+      workspaceId,
+      projectId,
+      releaseId,
+      userId: actor.userId,
+      operationId,
+      requestId: ensureResponseRequestId(response),
     });
   }
 
