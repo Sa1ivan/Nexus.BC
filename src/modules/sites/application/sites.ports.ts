@@ -1,6 +1,7 @@
 import type { TransactionContext } from '../../../shared/database/transaction-runner';
 import type { Project } from '../domain/project';
 import type { ProjectRevision } from '../domain/project-revision';
+import type { Release } from '../domain/release';
 import type { SiteConfigDocument } from '../domain/site-config-v4';
 
 export const SITE_REPOSITORY = Symbol('SiteRepository');
@@ -20,6 +21,20 @@ export interface SaveDraftRecord {
   readonly operationId: string;
   readonly expectedDraftVersion: number;
   readonly siteConfig: SiteConfigDocument;
+}
+
+export interface PublishProjectRecord {
+  readonly workspaceId: string;
+  readonly projectId: string;
+  readonly operationId: string;
+  readonly expectedDraftVersion: number;
+  readonly siteConfig: SiteConfigDocument;
+}
+
+export interface ActivateReleaseRecord {
+  readonly workspaceId: string;
+  readonly projectId: string;
+  readonly releaseId: string;
 }
 
 export interface ProjectSummary {
@@ -50,6 +65,19 @@ export type SaveDraftResult =
     }
   | { readonly kind: 'operation-conflict' };
 
+export type PublishProjectResult =
+  | { readonly kind: 'published'; readonly release: Release }
+  | { readonly kind: 'not-found' }
+  | {
+      readonly kind: 'version-conflict';
+      readonly currentDraftVersion: number;
+    }
+  | { readonly kind: 'operation-conflict' };
+
+export type ActivateReleaseResult =
+  | { readonly kind: 'activated'; readonly release: Release }
+  | { readonly kind: 'not-found' };
+
 export interface SiteRepository {
   create(
     context: TransactionContext,
@@ -64,10 +92,23 @@ export interface SiteRepository {
     projectId: string,
     version: number,
   ): Promise<ProjectRevision | null>;
+  findReleaseForWorkspace(
+    workspaceId: string,
+    projectId: string,
+    releaseId: string,
+  ): Promise<Release | null>;
   saveDraft(
     context: TransactionContext,
     input: SaveDraftRecord,
   ): Promise<SaveDraftResult>;
+  publishProject(
+    context: TransactionContext,
+    input: PublishProjectRecord,
+  ): Promise<PublishProjectResult>;
+  activateRelease(
+    context: TransactionContext,
+    input: ActivateReleaseRecord,
+  ): Promise<ActivateReleaseResult>;
   listRevisions(
     workspaceId: string,
     projectId: string,

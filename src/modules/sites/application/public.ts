@@ -26,6 +26,13 @@ export interface ProjectRevisionMetadataDto {
   readonly createdAt: string;
 }
 
+export interface ReleaseResultDto {
+  readonly releaseId: string;
+  readonly projectId: string;
+  readonly version: number;
+  readonly schemaVersion: 4;
+}
+
 export interface CursorPageDto<T> {
   readonly items: readonly T[];
   readonly nextCursor: string | null;

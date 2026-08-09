@@ -5,6 +5,8 @@ import type {
   AuditWriter,
   LeadSubmittedAuditEvent,
   MembershipRoleChangedAuditEvent,
+  ProjectPublishedAuditEvent,
+  ReleaseActivatedAuditEvent,
 } from './audit-writer';
 import type { TransactionContext } from '../database/transaction-runner';
 import {
@@ -79,6 +81,60 @@ function assertMembershipRoleChangedEvent(
   }
 }
 
+function assertReleaseAuditEvent(
+  event: ProjectPublishedAuditEvent | ReleaseActivatedAuditEvent,
+): void {
+  const { metadata } = event;
+  if (
+    !['PROJECT_PUBLISHED', 'RELEASE_ACTIVATED'].includes(event.action) ||
+    !uuidPattern.test(event.workspaceId) ||
+    !uuidPattern.test(event.actorUserId) ||
+    event.resourceType !== 'Release' ||
+    !uuidPattern.test(event.resourceId) ||
+    typeof event.requestId !== 'string' ||
+    event.requestId.length === 0 ||
+    typeof metadata !== 'object' ||
+    metadata === null ||
+    Array.isArray(metadata) ||
+    Object.keys(metadata).sort().join(',') !== 'projectId,version' ||
+    !uuidPattern.test(metadata.projectId) ||
+    !Number.isSafeInteger(metadata.version) ||
+    metadata.version < 1
+  ) {
+    throw new Error(`${event.action} event is not allowlisted`);
+  }
+}
+
+function unsupportedAuditAction(event: never): never {
+  const action = (event as { readonly action?: unknown }).action;
+  throw new Error(`Audit action is not allowlisted: ${String(action)}`);
+}
+
+function auditMetadata(
+  event: AuditEventRequest,
+): Readonly<Record<string, unknown>> {
+  switch (event.action) {
+    case 'LEAD_SUBMITTED':
+      return {
+        releaseId: event.metadata.releaseId,
+        outcome: event.metadata.outcome,
+      };
+    case 'MEMBERSHIP_ROLE_CHANGED':
+      return {
+        fromRole: event.metadata.fromRole,
+        toRole: event.metadata.toRole,
+      };
+    case 'PROJECT_PUBLISHED':
+    case 'RELEASE_ACTIVATED':
+      return {
+        projectId: event.metadata.projectId,
+        version: event.metadata.version,
+      };
+    default:
+      return unsupportedAuditAction(event);
+  }
+}
+
 @Injectable()
 export class PrismaAuditWriter implements AuditWriter {
   constructor(private readonly transactions: TransactionRunner) {}
@@ -87,10 +143,19 @@ export class PrismaAuditWriter implements AuditWriter {
     context: TransactionContext,
     event: AuditEventRequest,
   ): Promise<AppendedAuditEvent> {
-    if (event.action === 'LEAD_SUBMITTED') {
-      assertLeadSubmittedEvent(event);
-    } else {
-      assertMembershipRoleChangedEvent(event);
+    switch (event.action) {
+      case 'LEAD_SUBMITTED':
+        assertLeadSubmittedEvent(event);
+        break;
+      case 'MEMBERSHIP_ROLE_CHANGED':
+        assertMembershipRoleChangedEvent(event);
+        break;
+      case 'PROJECT_PUBLISHED':
+      case 'RELEASE_ACTIVATED':
+        assertReleaseAuditEvent(event);
+        break;
+      default:
+        return unsupportedAuditAction(event);
     }
 
     return this.transactions[PrismaTransactionClientService](
@@ -128,16 +193,7 @@ export class PrismaAuditWriter implements AuditWriter {
             action: event.action,
             resourceType: event.resourceType,
             resourceId: event.resourceId,
-            metadata:
-              event.action === 'LEAD_SUBMITTED'
-                ? {
-                    releaseId: event.metadata.releaseId,
-                    outcome: event.metadata.outcome,
-                  }
-                : {
-                    fromRole: event.metadata.fromRole,
-                    toRole: event.metadata.toRole,
-                  },
+            metadata: auditMetadata(event),
             requestId: event.requestId,
           },
         });
