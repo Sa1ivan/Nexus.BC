@@ -58,6 +58,8 @@ model Project {
   updatedAt          DateTime          @updatedAt
   workspace          Workspace         @relation(fields: [workspaceId], references: [id], onDelete: Restrict)
   revisions          ProjectRevision[]
+  releases           Release[]
+  activeRelease      ActiveRelease?    @relation("ProjectActivation")
 
   @@unique([workspaceId, createOperationId])
   @@index([workspaceId, updatedAt])
@@ -75,6 +77,32 @@ model ProjectRevision {
 
   @@unique([projectId, version])
   @@unique([projectId, operationId])
+}
+
+model Release {
+  id            String          @id @default(uuid()) @db.Uuid
+  projectId     String          @db.Uuid
+  operationId   String
+  version       Int
+  siteConfig    Json
+  schemaVersion Int
+  publishedAt   DateTime        @default(now())
+  project       Project         @relation(fields: [projectId], references: [id], onDelete: Restrict)
+  activations   ActiveRelease[] @relation("ReleaseActivation")
+
+  @@unique([projectId, id])
+  @@unique([projectId, version])
+  @@unique([projectId, operationId])
+}
+
+model ActiveRelease {
+  projectId   String   @id @db.Uuid
+  releaseId   String   @db.Uuid
+  activatedAt DateTime @default(now())
+  project     Project  @relation("ProjectActivation", fields: [projectId], references: [id], onDelete: Cascade)
+  release     Release  @relation("ReleaseActivation", fields: [projectId, releaseId], references: [projectId, id], onDelete: Cascade)
+
+  @@index([releaseId])
 }
 
 model IdempotencyRecord {
