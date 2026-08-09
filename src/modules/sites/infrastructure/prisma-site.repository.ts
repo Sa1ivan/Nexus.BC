@@ -6,10 +6,14 @@ import {
   TransactionRunner,
 } from '../../../shared/database/transaction-runner';
 import type {
+  ActivateReleaseRecord,
+  ActivateReleaseResult,
   CreateProjectRecord,
   CursorInput,
   CursorPage,
   ProjectSummary,
+  PublishProjectRecord,
+  PublishProjectResult,
   SaveDraftRecord,
   SaveDraftResult,
   SiteRepository,
@@ -17,6 +21,7 @@ import type {
 import { InvalidSiteCursorError } from '../application/sites-errors';
 import type { Project } from '../domain/project';
 import type { ProjectRevision } from '../domain/project-revision';
+import type { Release } from '../domain/release';
 import type { SiteConfigDocument } from '../domain/site-config-v4';
 
 interface ProjectRow {
@@ -50,6 +55,22 @@ interface SummaryRow {
   readonly updatedAt: Date;
 }
 
+interface ReleaseRow {
+  readonly id: string;
+  readonly projectId: string;
+  readonly operationId: string;
+  readonly version: number;
+  readonly siteConfig: unknown;
+  readonly schemaVersion: number;
+  readonly publishedAt: Date;
+}
+
+interface ActiveReleaseRow {
+  readonly projectId: string;
+  readonly releaseId: string;
+  readonly activatedAt: Date;
+}
+
 interface SitePrismaClient {
   readonly project: {
     findFirst(
@@ -67,6 +88,11 @@ interface SitePrismaClient {
       arguments_: Readonly<Record<string, unknown>>,
     ): Promise<RevisionRow[]>;
   };
+  readonly release: {
+    findFirst(
+      arguments_: Readonly<Record<string, unknown>>,
+    ): Promise<ReleaseRow | null>;
+  };
 }
 
 interface SiteTransactionClient extends SitePrismaClient {
@@ -81,6 +107,14 @@ interface SiteTransactionClient extends SitePrismaClient {
     findFirst(
       arguments_: Readonly<Record<string, unknown>>,
     ): Promise<{ readonly id: string } | null>;
+  };
+  readonly release: SitePrismaClient['release'] & {
+    create(arguments_: Readonly<Record<string, unknown>>): Promise<ReleaseRow>;
+  };
+  readonly activeRelease: {
+    upsert(
+      arguments_: Readonly<Record<string, unknown>>,
+    ): Promise<ActiveReleaseRow>;
   };
 }
 
@@ -136,6 +170,18 @@ function storedRevision(row: RevisionRow): ProjectRevision {
     siteConfig: siteConfigDocument(row.siteConfig),
     schemaVersion: schemaVersion(row.schemaVersion),
     createdAt: row.createdAt,
+  };
+}
+
+function storedRelease(row: ReleaseRow): Release {
+  return {
+    id: row.id,
+    projectId: row.projectId,
+    operationId: row.operationId,
+    version: row.version,
+    siteConfig: siteConfigDocument(row.siteConfig),
+    schemaVersion: schemaVersion(row.schemaVersion),
+    publishedAt: row.publishedAt,
   };
 }
 
@@ -290,6 +336,21 @@ export class PrismaSiteRepository implements SiteRepository {
     return revision === null ? null : storedRevision(revision);
   }
 
+  async findReleaseForWorkspace(
+    workspaceId: string,
+    projectId: string,
+    releaseId: string,
+  ): Promise<Release | null> {
+    const release = await this.prisma.release.findFirst({
+      where: {
+        id: releaseId,
+        projectId,
+        project: { workspaceId },
+      },
+    });
+    return release === null ? null : storedRelease(release);
+  }
+
   async saveDraft(
     context: TransactionContext,
     input: SaveDraftRecord,
@@ -346,6 +407,106 @@ export class PrismaSiteRepository implements SiteRepository {
         throw new Error('Saved project disappeared inside its transaction');
       }
       return { kind: 'saved', project: storedProject(project) };
+    });
+  }
+
+  async publishProject(
+    context: TransactionContext,
+    input: PublishProjectRecord,
+  ): Promise<PublishProjectResult> {
+    return this.withTransaction(context, async (transaction) => {
+      const repeatedOperation = await transaction.release.findFirst({
+        where: {
+          projectId: input.projectId,
+          operationId: input.operationId,
+          project: { workspaceId: input.workspaceId },
+        },
+      });
+      if (repeatedOperation !== null) return { kind: 'operation-conflict' };
+
+      const updated = await transaction.project.updateMany({
+        where: {
+          id: input.projectId,
+          workspaceId: input.workspaceId,
+          draftVersion: input.expectedDraftVersion,
+        },
+        data: {
+          draft: input.siteConfig,
+          draftSchemaVersion: 4,
+          draftVersion: { increment: 1 },
+        },
+      });
+      if (updated.count === 0) {
+        const current = await transaction.project.findFirst({
+          where: { id: input.projectId, workspaceId: input.workspaceId },
+        });
+        return current === null
+          ? { kind: 'not-found' }
+          : {
+              kind: 'version-conflict',
+              currentDraftVersion: current.draftVersion,
+            };
+      }
+
+      const version = input.expectedDraftVersion + 1;
+      await transaction.projectRevision.create({
+        data: {
+          projectId: input.projectId,
+          operationId: input.operationId,
+          version,
+          siteConfig: input.siteConfig,
+          schemaVersion: 4,
+        },
+      });
+      const release = await transaction.release.create({
+        data: {
+          projectId: input.projectId,
+          operationId: input.operationId,
+          version,
+          siteConfig: input.siteConfig,
+          schemaVersion: 4,
+        },
+      });
+      await transaction.activeRelease.upsert({
+        where: { projectId: input.projectId },
+        create: {
+          projectId: input.projectId,
+          releaseId: release.id,
+        },
+        update: {
+          releaseId: release.id,
+          activatedAt: new Date(),
+        },
+      });
+      return { kind: 'published', release: storedRelease(release) };
+    });
+  }
+
+  async activateRelease(
+    context: TransactionContext,
+    input: ActivateReleaseRecord,
+  ): Promise<ActivateReleaseResult> {
+    return this.withTransaction(context, async (transaction) => {
+      const release = await transaction.release.findFirst({
+        where: {
+          id: input.releaseId,
+          projectId: input.projectId,
+          project: { workspaceId: input.workspaceId },
+        },
+      });
+      if (release === null) return { kind: 'not-found' };
+      await transaction.activeRelease.upsert({
+        where: { projectId: input.projectId },
+        create: {
+          projectId: input.projectId,
+          releaseId: input.releaseId,
+        },
+        update: {
+          releaseId: input.releaseId,
+          activatedAt: new Date(),
+        },
+      });
+      return { kind: 'activated', release: storedRelease(release) };
     });
   }
 

@@ -30,8 +30,32 @@ export interface MembershipRoleChangedAuditEvent {
   readonly requestId: string;
 }
 
+interface ReleaseAuditEventBase {
+  readonly eventId: string;
+  readonly workspaceId: string;
+  readonly actorUserId: string;
+  readonly resourceType: 'Release';
+  readonly resourceId: string;
+  readonly metadata: {
+    readonly projectId: string;
+    readonly version: number;
+  };
+  readonly requestId: string;
+}
+
+export interface ProjectPublishedAuditEvent extends ReleaseAuditEventBase {
+  readonly action: 'PROJECT_PUBLISHED';
+}
+
+export interface ReleaseActivatedAuditEvent extends ReleaseAuditEventBase {
+  readonly action: 'RELEASE_ACTIVATED';
+}
+
 export type AuditEventRequest =
-  LeadSubmittedAuditEvent | MembershipRoleChangedAuditEvent;
+  | LeadSubmittedAuditEvent
+  | MembershipRoleChangedAuditEvent
+  | ProjectPublishedAuditEvent
+  | ReleaseActivatedAuditEvent;
 
 export interface AppendedAuditEvent {
   readonly eventId: string;
