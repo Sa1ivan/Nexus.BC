@@ -37,6 +37,13 @@ export interface ActivateReleaseRecord {
   readonly releaseId: string;
 }
 
+export interface PublicReleaseSnapshot {
+  readonly id: string;
+  readonly version: number;
+  readonly siteConfig: SiteConfigDocument;
+  readonly schemaVersion: 4;
+}
+
 export interface ProjectSummary {
   readonly id: string;
   readonly workspaceId: string;
@@ -97,6 +104,9 @@ export interface SiteRepository {
     projectId: string,
     releaseId: string,
   ): Promise<Release | null>;
+  findActiveReleaseByPublicSlug(
+    publicSlug: string,
+  ): Promise<PublicReleaseSnapshot | null>;
   saveDraft(
     context: TransactionContext,
     input: SaveDraftRecord,
