@@ -1,4 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
+import type { ProjectRevision } from '../domain/project-revision';
 import type { CursorPageDto, ProjectRevisionMetadataDto } from './public';
 import { SiteAccessPolicy } from './site-access-policy';
 import { projectRevisionMetadataDto } from './site-project-view';
@@ -8,7 +9,6 @@ import {
   type CursorInput,
   type CursorPage,
   type SiteRepository,
-  type StoredProjectRevision,
 } from './sites.ports';
 
 @Injectable()
@@ -30,7 +30,7 @@ export class ListProjectRevisions {
       input.projectId,
     );
     if (project === null) throw new SitesApplicationError('NOT_FOUND');
-    let page: CursorPage<StoredProjectRevision>;
+    let page: CursorPage<ProjectRevision>;
     try {
       page = await this.repository.listRevisions(
         input.workspaceId,

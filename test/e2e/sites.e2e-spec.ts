@@ -14,6 +14,11 @@ import {
   type AppConfig,
   loadAppConfig,
 } from '../../src/shared/config/app-config.schema';
+import { IdempotencyCoordinator } from '../../src/shared/idempotency/idempotency-coordinator';
+import {
+  SITE_REPOSITORY,
+  type SiteRepository,
+} from '../../src/modules/sites/application/sites.ports';
 
 const allowedOrigin = 'http://localhost:4200';
 const accessTokenSecret = 'test-access-token-secret-32-bytes';
@@ -392,6 +397,47 @@ describe('authenticated sites drafts HTTP contract', () => {
     });
   });
 
+  it('rolls back a project, its revision, and replay state when the coordinated command fails before commit', async () => {
+    const coordinator = app.get(IdempotencyCoordinator);
+    const repository = app.get<SiteRepository>(SITE_REPOSITORY);
+    const projectId = randomUUID();
+    const operationId = randomUUID();
+    const siteConfig = fixture('v4-minimal-valid.json');
+
+    await expect(
+      coordinator.execute({
+        key: {
+          scope: `workspace:${owner.workspaceId}`,
+          operation: 'CREATE_PROJECT',
+          key: operationId,
+        },
+        request: {
+          operation: 'CREATE_PROJECT',
+          workspaceId: owner.workspaceId,
+          name: 'Rolled back project',
+          siteConfig,
+        },
+        command: async (context) => {
+          await repository.create(context, {
+            id: projectId,
+            workspaceId: owner.workspaceId,
+            operationId: `CREATE_PROJECT:${operationId}`,
+            name: 'Rolled back project',
+            publicSlug: `site-${projectId}`,
+            siteConfig,
+          });
+          throw new Error('forced failure before idempotency completion');
+        },
+      }),
+    ).rejects.toThrow('forced failure before idempotency completion');
+
+    await expect(siteCounts(pool)).resolves.toEqual({
+      projects: 0,
+      revisions: 0,
+      idempotencyRecords: 0,
+    });
+  });
+
   it('replays the original create after response loss for RFC 8785-equivalent JSON', async () => {
     const operationId = randomUUID();
     const source = fixture('v4-minimal-valid.json');
@@ -575,6 +621,52 @@ describe('authenticated sites drafts HTTP contract', () => {
       projects: 1,
       revisions: 2,
       idempotencyRecords: 2,
+    });
+  });
+
+  it('replays the committed save revision after the project advances again', async () => {
+    const created = await createProjectRequest(
+      app,
+      owner,
+      randomUUID(),
+      fixture('v4-minimal-valid.json'),
+    ).expect(201);
+    const id = projectId(created);
+    const lostResponseOperationId = randomUUID();
+    const savedSiteConfig = fixture('v4-bundled-images-valid.json');
+    const firstSave = await saveDraftRequest(
+      app,
+      owner,
+      id,
+      lostResponseOperationId,
+      1,
+      savedSiteConfig,
+    ).expect(200);
+
+    await saveDraftRequest(
+      app,
+      owner,
+      id,
+      randomUUID(),
+      2,
+      fixture('v4-full-valid.json'),
+    ).expect(200);
+
+    const replay = await saveDraftRequest(
+      app,
+      owner,
+      id,
+      lostResponseOperationId,
+      1,
+      reorderJson(savedSiteConfig),
+    ).expect(200);
+
+    expect(responseBody(replay)).toEqual(responseBody(firstSave));
+    expect(responseBody(replay)).toMatchObject({ draftVersion: 2 });
+    await expect(siteCounts(pool)).resolves.toEqual({
+      projects: 1,
+      revisions: 3,
+      idempotencyRecords: 3,
     });
   });
 
