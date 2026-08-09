@@ -1,16 +1,13 @@
 import type { AppConfig } from '../../../shared/config/app-config.schema';
 import type { StoredIdempotencyRecord } from '../../../shared/idempotency/idempotency-store';
+import type { Project } from '../domain/project';
+import type { ProjectRevision } from '../domain/project-revision';
 import type {
   EditorProjectDto,
   ProjectRevisionMetadataDto,
   ProjectSummaryDto,
 } from './public';
-import type {
-  ProjectSummary,
-  SiteRepository,
-  StoredProject,
-  StoredProjectRevision,
-} from './sites.ports';
+import type { ProjectSummary, SiteRepository } from './sites.ports';
 
 function applicationOrigin(configuration: AppConfig): string {
   const origin = configuration.webOrigins[0];
@@ -27,9 +24,9 @@ export function projectPublicUrl(
 }
 
 export function editorProjectDto(
-  project: StoredProject,
+  project: Project,
   configuration: AppConfig,
-  revision?: StoredProjectRevision,
+  revision?: ProjectRevision,
 ): EditorProjectDto {
   return {
     id: project.id,
@@ -58,7 +55,7 @@ export function projectSummaryDto(
 }
 
 export function projectRevisionMetadataDto(
-  revision: StoredProjectRevision,
+  revision: ProjectRevision,
 ): ProjectRevisionMetadataDto {
   return {
     id: revision.id,

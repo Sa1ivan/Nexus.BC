@@ -8,6 +8,8 @@ export const SITE_CONFIG_V4_CANONICAL_BYTES_LIMIT = 1_048_576;
 export const SITE_CONFIG_V4_JSON_ENVELOPE_BYTES_LIMIT = 1_310_720;
 export const SITE_CONFIG_V4_MAX_JSON_DEPTH = 32;
 
+export type SiteConfigDocument = Readonly<Record<string, unknown>>;
+
 export type SiteConfigV4ValidationErrorCode =
   | 'json-envelope-too-large'
   | 'invalid-json'
@@ -19,7 +21,7 @@ export type SiteConfigV4ValidationErrorCode =
 export type SiteConfigV4ValidationResult =
   | {
       readonly ok: true;
-      readonly value: Readonly<Record<string, unknown>>;
+      readonly value: SiteConfigDocument;
       readonly canonicalJson: string;
       readonly canonicalBytes: number;
     }
@@ -76,9 +78,9 @@ export function validateAndCanonicalizeSiteConfigV4Json(
     return failure('invalid-site-config');
   }
 
-  const canonicalValue = canonicalizeBundledMediaPaths(parsed) as Readonly<
-    Record<string, unknown>
-  >;
+  const canonicalValue = canonicalizeBundledMediaPaths(
+    parsed,
+  ) as SiteConfigDocument;
   const canonicalJson = stableJsonStringify(canonicalValue);
   const canonicalBytes = Buffer.byteLength(canonicalJson);
 

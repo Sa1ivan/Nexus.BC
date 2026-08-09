@@ -12,12 +12,12 @@ import type {
   ProjectSummary,
   SaveDraftRecord,
   SaveDraftResult,
-  SiteConfigDocument,
   SiteRepository,
-  StoredProject,
-  StoredProjectRevision,
 } from '../application/sites.ports';
 import { InvalidSiteCursorError } from '../application/sites-errors';
+import type { Project } from '../domain/project';
+import type { ProjectRevision } from '../domain/project-revision';
+import type { SiteConfigDocument } from '../domain/site-config-v4';
 
 interface ProjectRow {
   readonly id: string;
@@ -113,7 +113,7 @@ function schemaVersion(value: number): 4 {
   return value;
 }
 
-function storedProject(row: ProjectRow): StoredProject {
+function storedProject(row: ProjectRow): Project {
   return {
     id: row.id,
     workspaceId: row.workspaceId,
@@ -127,7 +127,7 @@ function storedProject(row: ProjectRow): StoredProject {
   };
 }
 
-function storedRevision(row: RevisionRow): StoredProjectRevision {
+function storedRevision(row: RevisionRow): ProjectRevision {
   return {
     id: row.id,
     projectId: row.projectId,
@@ -242,7 +242,7 @@ export class PrismaSiteRepository implements SiteRepository {
   async create(
     context: TransactionContext,
     input: CreateProjectRecord,
-  ): Promise<StoredProject> {
+  ): Promise<Project> {
     return this.withTransaction(context, async (transaction) => {
       const project = await transaction.project.create({
         data: {
@@ -272,7 +272,7 @@ export class PrismaSiteRepository implements SiteRepository {
   async findForWorkspace(
     workspaceId: string,
     projectId: string,
-  ): Promise<StoredProject | null> {
+  ): Promise<Project | null> {
     const project = await this.prisma.project.findFirst({
       where: { id: projectId, workspaceId },
     });
@@ -283,7 +283,7 @@ export class PrismaSiteRepository implements SiteRepository {
     workspaceId: string,
     projectId: string,
     version: number,
-  ): Promise<StoredProjectRevision | null> {
+  ): Promise<ProjectRevision | null> {
     const revision = await this.prisma.projectRevision.findFirst({
       where: { projectId, version, project: { workspaceId } },
     });
@@ -353,7 +353,7 @@ export class PrismaSiteRepository implements SiteRepository {
     workspaceId: string,
     projectId: string,
     page?: CursorInput,
-  ): Promise<CursorPage<StoredProjectRevision>> {
+  ): Promise<CursorPage<ProjectRevision>> {
     const limit = pageLimit(page);
     const cursor = revisionCursor(page?.cursor);
     const rows = await this.prisma.projectRevision.findMany({

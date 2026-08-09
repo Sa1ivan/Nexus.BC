@@ -1,4 +1,4 @@
-import { existsSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import ts from 'typescript';
 import {
@@ -35,6 +35,28 @@ describe('module architecture', () => {
     });
 
     expect(missingCompositionRoots).toEqual([]);
+  });
+
+  it('owns Project and ProjectRevision models in the sites domain', () => {
+    const projectModelPath = path.join(modulesRoot, 'sites/domain/project.ts');
+    const revisionModelPath = path.join(
+      modulesRoot,
+      'sites/domain/project-revision.ts',
+    );
+    const missingModels = [projectModelPath, revisionModelPath].filter(
+      (modelPath) => !existsSync(modelPath),
+    );
+
+    expect(missingModels).toEqual([]);
+    if (missingModels.length > 0) return;
+
+    const ports = readFileSync(
+      path.join(modulesRoot, 'sites/application/sites.ports.ts'),
+      'utf8',
+    );
+    expect(ports).toContain("from '../domain/project'");
+    expect(ports).toContain("from '../domain/project-revision'");
+    expect(ports).not.toMatch(/interface StoredProject(?:Revision)?\b/u);
   });
 
   it('does not traverse unrestricted external type graphs', () => {

@@ -1,8 +1,9 @@
 import type { TransactionContext } from '../../../shared/database/transaction-runner';
+import type { Project } from '../domain/project';
+import type { ProjectRevision } from '../domain/project-revision';
+import type { SiteConfigDocument } from '../domain/site-config-v4';
 
 export const SITE_REPOSITORY = Symbol('SiteRepository');
-
-export type SiteConfigDocument = Readonly<Record<string, unknown>>;
 
 export interface CreateProjectRecord {
   readonly id: string;
@@ -19,28 +20,6 @@ export interface SaveDraftRecord {
   readonly operationId: string;
   readonly expectedDraftVersion: number;
   readonly siteConfig: SiteConfigDocument;
-}
-
-export interface StoredProject {
-  readonly id: string;
-  readonly workspaceId: string;
-  readonly name: string;
-  readonly publicSlug: string;
-  readonly draft: SiteConfigDocument;
-  readonly draftSchemaVersion: 4;
-  readonly draftVersion: number;
-  readonly createdAt: Date;
-  readonly updatedAt: Date;
-}
-
-export interface StoredProjectRevision {
-  readonly id: string;
-  readonly projectId: string;
-  readonly operationId: string;
-  readonly version: number;
-  readonly siteConfig: SiteConfigDocument;
-  readonly schemaVersion: 4;
-  readonly createdAt: Date;
 }
 
 export interface ProjectSummary {
@@ -63,7 +42,7 @@ export interface CursorPage<T> {
 }
 
 export type SaveDraftResult =
-  | { readonly kind: 'saved'; readonly project: StoredProject }
+  | { readonly kind: 'saved'; readonly project: Project }
   | { readonly kind: 'not-found' }
   | {
       readonly kind: 'version-conflict';
@@ -75,16 +54,16 @@ export interface SiteRepository {
   create(
     context: TransactionContext,
     input: CreateProjectRecord,
-  ): Promise<StoredProject>;
+  ): Promise<Project>;
   findForWorkspace(
     workspaceId: string,
     projectId: string,
-  ): Promise<StoredProject | null>;
+  ): Promise<Project | null>;
   findRevisionForWorkspace(
     workspaceId: string,
     projectId: string,
     version: number,
-  ): Promise<StoredProjectRevision | null>;
+  ): Promise<ProjectRevision | null>;
   saveDraft(
     context: TransactionContext,
     input: SaveDraftRecord,
@@ -93,7 +72,7 @@ export interface SiteRepository {
     workspaceId: string,
     projectId: string,
     page?: CursorInput,
-  ): Promise<CursorPage<StoredProjectRevision>>;
+  ): Promise<CursorPage<ProjectRevision>>;
   listProjectSummaries(
     workspaceId: string,
     page?: CursorInput,

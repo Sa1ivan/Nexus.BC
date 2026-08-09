@@ -1,6 +1,6 @@
 import { validateAndCanonicalizeSiteConfigV4Json } from '../domain/site-config-v4';
+import type { SiteConfigDocument } from '../domain/site-config-v4';
 import { SitesApplicationError } from './sites-errors';
-import type { SiteConfigDocument } from './sites.ports';
 
 export function requireCanonicalSiteConfig(value: unknown): SiteConfigDocument {
   let serialized: string | undefined;
