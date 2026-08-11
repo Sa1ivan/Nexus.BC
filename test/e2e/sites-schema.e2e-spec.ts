@@ -396,13 +396,14 @@ describe('sites draft persistence schema', () => {
     ).resolves.toEqual(['scope', 'operation', 'key']);
 
     const projectIndexDefinitions = await indexDefinitions(client, 'Project');
-    expect(projectIndexDefinitions).toHaveLength(4);
+    expect(projectIndexDefinitions).toHaveLength(5);
     const projectIndexes = projectIndexDefinitions.join('\n');
     expect(projectIndexes).toMatch(/UNIQUE.+\(id\)/u);
     expect(projectIndexes).toMatch(/UNIQUE.+\("publicSlug"\)/u);
     expect(projectIndexes).toMatch(
       /UNIQUE.+\("workspaceId", "createOperationId"\)/u,
     );
+    expect(projectIndexes).toMatch(/UNIQUE.+\("workspaceId", id\)/u);
     expect(projectIndexes).toMatch(/\("workspaceId", "updatedAt"\)/u);
 
     const revisionIndexDefinitions = await indexDefinitions(

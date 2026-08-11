@@ -23,6 +23,12 @@ enum OutboxDeliveryState {
   CANCELLED
 }
 
+enum MediaAssetStatus {
+  PENDING
+  READY
+  DELETING
+}
+
 model User {
   id                      String                   @id @default(uuid()) @db.Uuid
   email                   String                   @unique @db.VarChar(320)
@@ -37,30 +43,35 @@ model User {
 }
 
 model Workspace {
-  id          String       @id @default(uuid()) @db.Uuid
-  name        String       @db.VarChar(120)
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
-  memberships Membership[]
-  projects    Project[]
+  id                 String             @id @default(uuid()) @db.Uuid
+  name               String             @db.VarChar(120)
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+  memberships        Membership[]
+  projects           Project[]
+  mediaAssets        MediaAsset[]
+  mediaImportBatches MediaImportBatch[]
 }
 
 model Project {
-  id                 String            @id @default(uuid()) @db.Uuid
-  workspaceId        String            @db.Uuid
+  id                 String             @id @default(uuid()) @db.Uuid
+  workspaceId        String             @db.Uuid
   createOperationId  String
   name               String
-  publicSlug         String            @unique
+  publicSlug         String             @unique
   draft              Json
   draftSchemaVersion Int
-  draftVersion       Int               @default(1)
-  createdAt          DateTime          @default(now())
-  updatedAt          DateTime          @updatedAt
-  workspace          Workspace         @relation(fields: [workspaceId], references: [id], onDelete: Restrict)
+  draftVersion       Int                @default(1)
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+  workspace          Workspace          @relation(fields: [workspaceId], references: [id], onDelete: Restrict)
   revisions          ProjectRevision[]
   releases           Release[]
-  activeRelease      ActiveRelease?    @relation("ProjectActivation")
+  activeRelease      ActiveRelease?     @relation("ProjectActivation")
+  mediaAssets        MediaAsset[]       @relation("ProjectMediaAssets")
+  mediaImportBatches MediaImportBatch[] @relation("AttachedMediaImportBatches")
 
+  @@unique([workspaceId, id])
   @@unique([workspaceId, createOperationId])
   @@index([workspaceId, updatedAt])
 }
@@ -118,6 +129,52 @@ model IdempotencyRecord {
 
   @@id([scope, operation, key])
   @@index([resourceId])
+}
+
+model MediaImportBatch {
+  id                String       @id @default(uuid()) @db.Uuid
+  workspaceId       String       @db.Uuid
+  attachedProjectId String?      @db.Uuid
+  expiresAt         DateTime
+  attachedAt        DateTime?
+  createdAt         DateTime     @default(now())
+  workspace         Workspace    @relation(fields: [workspaceId], references: [id], onDelete: Restrict)
+  attachedProject   Project?     @relation("AttachedMediaImportBatches", fields: [workspaceId, attachedProjectId], references: [workspaceId, id], onDelete: Restrict)
+  assets            MediaAsset[]
+
+  @@unique([workspaceId, id])
+  @@index([workspaceId, expiresAt])
+  @@index([attachedProjectId])
+}
+
+model MediaAsset {
+  id                     String            @id @default(uuid()) @db.Uuid
+  workspaceId            String            @db.Uuid
+  projectId              String?           @db.Uuid
+  importBatchId          String?           @db.Uuid
+  status                 MediaAssetStatus  @default(PENDING)
+  objectKey              String            @unique @db.VarChar(1024)
+  declaredFileName       String            @db.VarChar(256)
+  declaredMimeType       String            @db.VarChar(64)
+  declaredSizeBytes      Int
+  declaredChecksumSha256 String            @db.VarChar(64)
+  verifiedMimeType       String?           @db.VarChar(64)
+  verifiedSizeBytes      Int?
+  verifiedWidth          Int?
+  verifiedHeight         Int?
+  verifiedChecksumSha256 String?           @db.VarChar(64)
+  verifiedAt             DateTime?
+  deletionMarkedAt       DateTime?
+  createdAt              DateTime          @default(now())
+  updatedAt              DateTime          @updatedAt
+  workspace              Workspace         @relation(fields: [workspaceId], references: [id], onDelete: Restrict)
+  project                Project?          @relation("ProjectMediaAssets", fields: [workspaceId, projectId], references: [workspaceId, id], onDelete: Restrict)
+  importBatch            MediaImportBatch? @relation(fields: [workspaceId, importBatchId], references: [workspaceId, id], onDelete: Restrict)
+
+  @@unique([workspaceId, id])
+  @@index([workspaceId, projectId, createdAt])
+  @@index([workspaceId, importBatchId])
+  @@index([status, createdAt])
 }
 
 model Membership {
