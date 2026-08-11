@@ -35,7 +35,10 @@ export async function replayReleaseResult(
   repository: SiteRepository,
   workspaceId: string,
   projectId: string,
-  expectedReleaseId?: string,
+  expectations: {
+    readonly releaseId?: string;
+    readonly operationId?: string;
+  } = {},
 ): Promise<ReleaseResultDto> {
   const body = record.responseBody;
   const releaseId = requiredString(body.releaseId, 'release id');
@@ -52,7 +55,8 @@ export async function replayReleaseResult(
     ]) ||
     body.schemaVersion !== 4 ||
     storedProjectId !== projectId ||
-    (expectedReleaseId !== undefined && releaseId !== expectedReleaseId)
+    (expectations.releaseId !== undefined &&
+      releaseId !== expectations.releaseId)
   ) {
     throw new Error('Stored idempotency release result is invalid');
   }
@@ -67,6 +71,14 @@ export async function replayReleaseResult(
     release.schemaVersion !== 4
   ) {
     throw new Error('Stored idempotency release snapshot is unavailable');
+  }
+  if (
+    expectations.operationId !== undefined &&
+    release.operationId !== expectations.operationId
+  ) {
+    throw new Error(
+      'Stored idempotency release result does not belong to its operation',
+    );
   }
   return releaseResultDto(release);
 }

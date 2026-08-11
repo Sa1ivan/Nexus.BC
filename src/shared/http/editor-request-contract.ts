@@ -5,6 +5,7 @@ import { requireString, throwRequestValidationError } from './request-contract';
 const uuidPattern =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu;
 const capabilityValuePattern = /^(?:4|5|4,5)$/u;
+const maximumExpectedDraftVersion = 2_147_483_646;
 
 function isAscii(value: string): boolean {
   for (const character of value) {
@@ -98,6 +99,17 @@ export function requireProjectName(value: unknown): string {
     throwRequestValidationError();
   }
   return name;
+}
+
+export function requireExpectedDraftVersion(value: unknown): number {
+  if (
+    !Number.isSafeInteger(value) ||
+    Number(value) < 1 ||
+    Number(value) > maximumExpectedDraftVersion
+  ) {
+    throwRequestValidationError();
+  }
+  return Number(value);
 }
 
 export function requireEditorPageInput(

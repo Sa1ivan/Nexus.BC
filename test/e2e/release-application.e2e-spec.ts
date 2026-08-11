@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import type { INestApplication } from '@nestjs/common';
@@ -42,6 +43,11 @@ interface SiteState {
   readonly revisions: number;
 }
 
+interface PointerAttemptProbe {
+  wasCalled(): Promise<boolean>;
+  dispose(): Promise<void>;
+}
+
 function uuid(value: number): string {
   return `00000000-0000-4000-8000-${value.toString(16).padStart(12, '0')}`;
 }
@@ -67,6 +73,75 @@ function fixtureIdentity(base: number): FixtureIdentity {
     userId: uuid(base),
     workspaceId: uuid(base + 1),
     projectId: uuid(base + 2),
+  };
+}
+
+async function installPointerAttemptProbe(
+  pool: Pool,
+  projectId: string,
+): Promise<PointerAttemptProbe> {
+  const token = randomUUID().replaceAll('-', '');
+  const sequenceName = `p105_pointer_attempt_${token}`;
+  const functionName = `p105_pointer_attempt_fn_${token}`;
+  const triggerName = `p105_pointer_attempt_tr_${token}`;
+  let sequenceCreated = false;
+  let functionCreated = false;
+  let triggerCreated = false;
+
+  const dispose = async (): Promise<void> => {
+    try {
+      if (triggerCreated) {
+        await pool.query(
+          `DROP TRIGGER IF EXISTS "${triggerName}" ON "ActiveRelease"`,
+        );
+      }
+    } finally {
+      try {
+        if (functionCreated) {
+          await pool.query(`DROP FUNCTION IF EXISTS "${functionName}"()`);
+        }
+      } finally {
+        if (sequenceCreated) {
+          await pool.query(`DROP SEQUENCE IF EXISTS "${sequenceName}"`);
+        }
+      }
+    }
+  };
+
+  try {
+    await pool.query(`CREATE SEQUENCE "${sequenceName}"`);
+    sequenceCreated = true;
+    await pool.query(
+      `CREATE FUNCTION "${functionName}"() RETURNS trigger
+       LANGUAGE plpgsql AS $p105$
+       BEGIN
+         IF NEW."projectId"::text = TG_ARGV[0] THEN
+           PERFORM nextval('${sequenceName}'::regclass);
+         END IF;
+         RETURN NEW;
+       END
+       $p105$`,
+    );
+    functionCreated = true;
+    await pool.query(
+      `CREATE TRIGGER "${triggerName}"
+       BEFORE INSERT OR UPDATE ON "ActiveRelease"
+       FOR EACH ROW EXECUTE FUNCTION "${functionName}"('${projectId}')`,
+    );
+    triggerCreated = true;
+  } catch (error) {
+    await dispose();
+    throw error;
+  }
+
+  return {
+    wasCalled: async () => {
+      const result = await pool.query<{ isCalled: boolean }>(
+        `SELECT "is_called" AS "isCalled" FROM "${sequenceName}"`,
+      );
+      return result.rows[0]?.isCalled ?? false;
+    },
+    dispose,
   };
 }
 
@@ -667,6 +742,52 @@ describe('publish and release activation application transactions', () => {
     }
   });
 
+  it('rejects a publish replay tuple redirected to another release from the same project', async () => {
+    const operationId = uuid(0x51003a);
+    const input = {
+      workspaceId: identity.workspaceId,
+      projectId: identity.projectId,
+      userId: identity.userId,
+      operationId,
+      requestId: uuid(0x51003b),
+      expectedDraftVersion: 1,
+      siteConfig: fixture('v4-full-valid.json'),
+    } as const;
+    const published = await publishProject.execute(input);
+    const substitutedRelease = await seedRelease(
+      pool,
+      identity,
+      uuid(0x51003c),
+      3,
+    );
+    await replaceStoredIdempotencyTuple(
+      pool,
+      identity,
+      'PUBLISH_PROJECT',
+      operationId,
+      {
+        httpStatus: 200,
+        resourceId: substitutedRelease.releaseId,
+        responseBody: {
+          releaseId: substitutedRelease.releaseId,
+          projectId: identity.projectId,
+          version: substitutedRelease.version,
+          schemaVersion: 4,
+        },
+      },
+    );
+
+    await expect(publishProject.execute(input)).rejects.toThrow(
+      'Stored idempotency release result does not belong to its operation',
+    );
+    await expect(siteState(pool, identity)).resolves.toMatchObject({
+      activeReleaseId: published.releaseId,
+      draftVersion: 2,
+      releases: 2,
+      revisions: 2,
+    });
+  });
+
   it('allows one of two different-key publish OCC racers and stores the stale conflict', async () => {
     const firstOperationId = uuid(0x510041);
     const secondOperationId = uuid(0x510042);
@@ -965,6 +1086,62 @@ describe('publish and release activation application transactions', () => {
       responseBody: result,
       resourceId: second.releaseId,
     });
+  });
+
+  it('rejects a structurally corrupt stored release before pointer, replay, or audit writes', async () => {
+    const active = await seedRelease(pool, identity, uuid(0x520005), 1, true);
+    const corruptReleaseId = uuid(0x520006);
+    const operationId = uuid(0x520007);
+    await pool.query(
+      `INSERT INTO "Release"
+         ("id", "projectId", "operationId", "version", "siteConfig", "schemaVersion")
+       VALUES ($1, $2, $3, 2, $4::jsonb, 4)`,
+      [
+        corruptReleaseId,
+        identity.projectId,
+        `PUBLISH_PROJECT:${corruptReleaseId}`,
+        JSON.stringify({
+          schemaVersion: 4,
+          workspaceId: identity.workspaceId,
+        }),
+      ],
+    );
+
+    const pointerAttempts = await installPointerAttemptProbe(
+      pool,
+      identity.projectId,
+    );
+    try {
+      await expect(
+        activateRelease.execute({
+          workspaceId: identity.workspaceId,
+          projectId: identity.projectId,
+          releaseId: corruptReleaseId,
+          userId: identity.userId,
+          operationId,
+          requestId: uuid(0x520008),
+        }),
+      ).rejects.toThrow('Stored release SiteConfig v4 snapshot is invalid');
+      await expect(pointerAttempts.wasCalled()).resolves.toBe(false);
+      await expect(siteState(pool, identity)).resolves.toEqual({
+        activeReleaseId: active.releaseId,
+        draftVersion: 1,
+        releases: 2,
+        revisions: 1,
+      });
+      await expect(
+        storedIdempotency(pool, identity, 'ACTIVATE_RELEASE', operationId),
+      ).resolves.toBeUndefined();
+      const audit = await pool.query(
+        `SELECT 1 FROM "AuditEvent"
+          WHERE "sequence" >= $1::bigint AND "resourceId" = $2`,
+        [testAuditSequence.toString(), corruptReleaseId],
+      );
+      expect(audit.rows).toEqual([]);
+      await expect(auditSequence(pool)).resolves.toBe(testAuditSequence);
+    } finally {
+      await pointerAttempts.dispose();
+    }
   });
 
   it('replays activation without restoring the original pointer or appending audit', async () => {

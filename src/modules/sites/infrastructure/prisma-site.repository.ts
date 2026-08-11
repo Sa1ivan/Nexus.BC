@@ -23,7 +23,10 @@ import { InvalidSiteCursorError } from '../application/sites-errors';
 import type { Project } from '../domain/project';
 import type { ProjectRevision } from '../domain/project-revision';
 import type { Release } from '../domain/release';
-import type { SiteConfigDocument } from '../domain/site-config-v4';
+import {
+  type SiteConfigDocument,
+  validateAndCanonicalizeSiteConfigV4Json,
+} from '../domain/site-config-v4';
 
 interface ProjectRow {
   readonly id: string;
@@ -158,6 +161,22 @@ function siteConfigDocument(value: unknown): SiteConfigDocument {
   return value;
 }
 
+function storedReleaseSiteConfig(value: unknown): SiteConfigDocument {
+  let serialized: string;
+  try {
+    const candidate = JSON.stringify(value);
+    if (candidate === undefined) throw new Error('not JSON');
+    serialized = candidate;
+  } catch {
+    throw new Error('Stored release SiteConfig v4 snapshot is invalid');
+  }
+  const validated = validateAndCanonicalizeSiteConfigV4Json(serialized);
+  if (!validated.ok) {
+    throw new Error('Stored release SiteConfig v4 snapshot is invalid');
+  }
+  return validated.value;
+}
+
 function schemaVersion(value: number): 4 {
   if (value !== 4)
     throw new Error('Stored SiteConfig schema version must be 4');
@@ -196,7 +215,7 @@ function storedRelease(row: ReleaseRow): Release {
     projectId: row.projectId,
     operationId: row.operationId,
     version: row.version,
-    siteConfig: siteConfigDocument(row.siteConfig),
+    siteConfig: storedReleaseSiteConfig(row.siteConfig),
     schemaVersion: schemaVersion(row.schemaVersion),
     publishedAt: row.publishedAt,
   };
@@ -545,6 +564,7 @@ export class PrismaSiteRepository implements SiteRepository {
         },
       });
       if (release === null) return { kind: 'not-found' };
+      const stored = storedRelease(release);
       await transaction.activeRelease.upsert({
         where: { projectId: input.projectId },
         create: {
@@ -556,7 +576,7 @@ export class PrismaSiteRepository implements SiteRepository {
           activatedAt: new Date(),
         },
       });
-      return { kind: 'activated', release: storedRelease(release) };
+      return { kind: 'activated', release: stored };
     });
   }
 

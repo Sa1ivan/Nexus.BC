@@ -139,7 +139,7 @@ export class ActivateRelease {
       this.repository,
       input.workspaceId,
       input.projectId,
-      input.releaseId,
+      { releaseId: input.releaseId },
     );
   }
 }
