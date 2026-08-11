@@ -20,6 +20,7 @@ import {
   PrismaTransactionClientService,
   TransactionRunner,
 } from '../../src/shared/database/transaction-runner';
+import { idempotencyAdvisoryLockId } from '../../src/shared/idempotency/idempotency-lock';
 
 const allowedOrigin = 'http://localhost:4200';
 const accessTokenSecret = 'test-access-token-secret-32-bytes';
@@ -81,6 +82,12 @@ interface ApplicationOptions {
 interface PointerWriteProbe {
   read(): Promise<number>;
   dispose(): Promise<void>;
+}
+
+interface DatabaseRaceGate {
+  release(): Promise<void>;
+  dispose(): Promise<void>;
+  waitUntilBlocked(): Promise<void>;
 }
 
 interface TransactionProbeClient {
@@ -776,6 +783,118 @@ async function installPointerWriteProbe(
   };
 }
 
+function advisoryLockParts(lockId: bigint): {
+  readonly classId: string;
+  readonly objectId: string;
+} {
+  const unsignedLockId = BigInt.asUintN(64, lockId);
+  return {
+    classId: (unsignedLockId >> 32n).toString(),
+    objectId: (unsignedLockId & 0xffff_ffffn).toString(),
+  };
+}
+
+async function waitForAdvisoryLock(
+  pool: Pool,
+  lockId: bigint,
+  granted: boolean,
+): Promise<void> {
+  const parts = advisoryLockParts(lockId);
+  for (let attempt = 0; attempt < 200; attempt += 1) {
+    const result = await pool.query<{ count: string }>(
+      `SELECT COUNT(*) AS "count"
+         FROM pg_locks
+        WHERE locktype = 'advisory'
+          AND classid::bigint = $1::bigint
+          AND objid::bigint = $2::bigint
+          AND granted = $3`,
+      [parts.classId, parts.objectId, granted],
+    );
+    if (Number(result.rows[0]?.count ?? 0) > 0) return;
+    await new Promise<void>((resolveWait) => setTimeout(resolveWait, 10));
+  }
+  throw new Error(
+    `Timed out waiting for advisory lock ${lockId.toString()} (granted=${String(granted)})`,
+  );
+}
+
+async function installDatabaseRaceGate(
+  pool: Pool,
+  projectId: string,
+  target: 'Project' | 'ActiveRelease',
+): Promise<DatabaseRaceGate> {
+  const token = randomUUID().replaceAll('-', '');
+  const functionName = `p105_race_gate_${token}`;
+  const triggerName = `p105_wait_race_${token}`;
+  const lockId = BigInt(`0x${token.slice(0, 15)}`);
+  const controller = await pool.connect();
+  let functionCreated = false;
+  let triggerCreated = false;
+  let lockHeld = false;
+
+  const release = async (): Promise<void> => {
+    if (!lockHeld) return;
+    await controller.query('SELECT pg_advisory_unlock($1::bigint)', [
+      lockId.toString(),
+    ]);
+    lockHeld = false;
+  };
+  const dispose = async (): Promise<void> => {
+    try {
+      await release();
+      if (triggerCreated) {
+        await pool.query(
+          `DROP TRIGGER IF EXISTS "${triggerName}" ON "${target}"`,
+        );
+      }
+    } finally {
+      try {
+        if (functionCreated) {
+          await pool.query(`DROP FUNCTION IF EXISTS "${functionName}"()`);
+        }
+      } finally {
+        controller.release();
+      }
+    }
+  };
+
+  try {
+    await controller.query('SELECT pg_advisory_lock($1::bigint)', [
+      lockId.toString(),
+    ]);
+    lockHeld = true;
+    const projectColumn = target === 'Project' ? 'id' : 'projectId';
+    await pool.query(
+      `CREATE FUNCTION "${functionName}"() RETURNS trigger
+       LANGUAGE plpgsql AS $p105$
+       BEGIN
+         IF NEW."${projectColumn}"::text = TG_ARGV[0] THEN
+           PERFORM pg_advisory_xact_lock(TG_ARGV[1]::bigint);
+         END IF;
+         RETURN NEW;
+       END
+       $p105$`,
+    );
+    functionCreated = true;
+    const event = target === 'Project' ? 'UPDATE' : 'INSERT OR UPDATE';
+    await pool.query(
+      `CREATE TRIGGER "${triggerName}"
+       BEFORE ${event} ON "${target}"
+       FOR EACH ROW EXECUTE FUNCTION "${functionName}"('${projectId}', '${lockId.toString()}')`,
+    );
+    triggerCreated = true;
+  } catch (error) {
+    await dispose();
+    throw error;
+  }
+
+  return {
+    release,
+    dispose,
+    waitUntilBlocked: () => waitForAdvisoryLock(pool, lockId, false),
+  };
+}
+
 async function idempotencyRows(
   pool: Pool,
   keys: readonly string[],
@@ -865,18 +984,6 @@ async function persistedProjectSnapshot(
   };
 }
 
-function collectPropertyKeys(value: unknown, keys: Set<string>): void {
-  if (Array.isArray(value)) {
-    for (const item of value) collectPropertyKeys(item, keys);
-    return;
-  }
-  if (!isRecord(value)) return;
-  for (const [key, item] of Object.entries(value)) {
-    keys.add(key);
-    collectPropertyKeys(item, keys);
-  }
-}
-
 function expectSafeAuditEvent(
   audit: AuditRow,
   identity: TestIdentity,
@@ -937,190 +1044,27 @@ function namedRepresentationValues(
   return matches;
 }
 
-function namedRepresentationValuesOutside(
-  value: unknown,
-  names: ReadonlySet<string>,
-  excludedContainers: ReadonlySet<string>,
-  matches: unknown[] = [],
-): readonly unknown[] {
-  if (Array.isArray(value)) {
-    for (const item of value as readonly unknown[]) {
-      namedRepresentationValuesOutside(
-        item,
-        names,
-        excludedContainers,
-        matches,
-      );
-    }
-    return matches;
-  }
-  if (!isRecord(value)) return matches;
-  for (const [key, item] of Object.entries(value)) {
-    if (names.has(key)) matches.push(item);
-    if (!excludedContainers.has(key)) {
-      namedRepresentationValuesOutside(
-        item,
-        names,
-        excludedContainers,
-        matches,
-      );
-    }
-  }
-  return matches;
-}
-
-function expectOnlySemanticValues(
-  values: readonly unknown[],
-  expected: unknown,
-): void {
-  expect(values.length).toBeGreaterThan(0);
-  for (const value of values) expect(value).toEqual(expected);
-}
-
-function releaseVersionValues(
-  value: unknown,
-  releaseId: string,
-  matches: unknown[] = [],
-): readonly unknown[] {
-  if (Array.isArray(value)) {
-    for (const item of value as readonly unknown[]) {
-      releaseVersionValues(item, releaseId, matches);
-    }
-    return matches;
-  }
-  if (!isRecord(value)) return matches;
-  if ('releaseVersion' in value) matches.push(value['releaseVersion']);
-  if (value['releaseId'] === releaseId && 'version' in value) {
-    matches.push(value['version']);
-  }
-  for (const item of Object.values(value)) {
-    releaseVersionValues(item, releaseId, matches);
-  }
-  return matches;
-}
-
-function expectPrivacyNotice(
-  body: Record<string, unknown>,
-  configuration: AppConfig,
-): void {
-  const urls = [
-    ...namedRepresentationValues(body, new Set(['privacyNoticeUrl'])),
-  ];
-  const versions = [
-    ...namedRepresentationValues(body, new Set(['privacyNoticeVersion'])),
-  ];
-  const containers = namedRepresentationValues(
-    body,
-    new Set(['privacyNotice']),
-  );
-  for (const container of containers) {
-    if (!isRecord(container)) {
-      throw new Error('Expected privacyNotice object');
-    }
-    urls.push(...namedRepresentationValues(container, new Set(['url'])));
-    versions.push(
-      ...namedRepresentationValues(container, new Set(['version'])),
-    );
-  }
-  expectOnlySemanticValues(urls, configuration.privacyNoticeUrl);
-  expectOnlySemanticValues(versions, configuration.privacyNoticeVersion);
-}
-
 function expectPublicRepresentation(
   response: request.Response,
   release: SeededRelease,
   configuration: AppConfig,
-  identity: TestIdentity,
-  project: SeededProject,
   pageSlug?: string,
 ): void {
   const body = responseBody(response);
-  expectOnlySemanticValues(
-    namedRepresentationValues(body, new Set(['releaseId'])),
-    release.id,
-  );
-  expectOnlySemanticValues(
-    releaseVersionValues(body, release.id),
-    release.version,
-  );
-  const pageContainers = new Set(['page', 'selectedPage']);
-  expectOnlySemanticValues(
-    namedRepresentationValuesOutside(body, new Set(['theme']), pageContainers),
-    release.siteConfig['theme'],
-  );
-  expectOnlySemanticValues(
-    namedRepresentationValuesOutside(
-      body,
-      new Set(['business']),
-      pageContainers,
-    ),
-    release.siteConfig['business'],
-  );
-  expectOnlySemanticValues(
-    namedRepresentationValuesOutside(body, new Set(['seo']), pageContainers),
-    release.siteConfig['seo'],
-  );
-  expectOnlySemanticValues(
-    namedRepresentationValuesOutside(body, new Set(['chrome']), pageContainers),
-    release.siteConfig['chrome'],
-  );
-  expectOnlySemanticValues(
-    namedRepresentationValues(body, pageContainers),
-    expectedPage(release.siteConfig, pageSlug),
-  );
-  expectPrivacyNotice(body, configuration);
-
-  const keys = new Set<string>();
-  collectPropertyKeys(body, keys);
-  for (const forbidden of [
-    'workspaceId',
-    'userId',
-    'actorUserId',
-    'membership',
-    'memberships',
-    'projectId',
-    'draft',
-    'draftVersion',
-    'draftSchemaVersion',
-    'revision',
-    'revisions',
-    'siteConfig',
-    'operationId',
-    'createOperationId',
-    'idempotencyKey',
-    'requestFingerprint',
-    'replay',
-    'scope',
-    'key',
-    'operation',
-    'httpStatus',
-    'responseBody',
-    'requestId',
-    'metadata',
-    'sequence',
-    'completedAt',
-    'resourceId',
-    'idempotency',
-    'idempotencyRecord',
-    'eventId',
-    'createdAt',
-    'updatedAt',
-    'publishedAt',
-    'activatedAt',
-    'operationKey',
-    'operationResult',
-    'auditAction',
-    'audit',
-    'auditEvent',
-  ]) {
-    expect(keys).not.toContain(forbidden);
-  }
-  const serialized = JSON.stringify(body);
-  expect(serialized).not.toContain(identity.userId);
-  expect(serialized).not.toContain(identity.workspaceId);
-  expect(serialized).not.toContain(identity.email);
-  expect(serialized).not.toContain(project.id);
-  expect(serialized).not.toContain(release.operationId);
+  expect(body).toEqual({
+    releaseId: release.id,
+    releaseVersion: release.version,
+    schemaVersion: 4,
+    theme: release.siteConfig['theme'],
+    business: release.siteConfig['business'],
+    seo: release.siteConfig['seo'],
+    chrome: release.siteConfig['chrome'],
+    page: expectedPage(release.siteConfig, pageSlug),
+    privacyNotice: {
+      url: configuration.privacyNoticeUrl,
+      version: configuration.privacyNoticeVersion,
+    },
+  });
 }
 
 function normalizedServerRequestIds(value: unknown): unknown {
@@ -1205,6 +1149,8 @@ describe('immutable releases and anonymous public sites HTTP contract', () => {
       publishMissingOrigin: randomUUID(),
       publishTooLong: 'p'.repeat(129),
       publishUnauthorized: randomUUID(),
+      publishVersionAtWriteOverflow: randomUUID(),
+      publishVersionOutsideInt4: randomUUID(),
       publishWrongMember: randomUUID(),
     };
     for (const key of Object.values(invalidKeys)) {
@@ -1279,6 +1225,22 @@ describe('immutable releases and anonymous public sites HTTP contract', () => {
       1,
       siteConfig,
     ).expect(404);
+    await publishRequest(
+      app,
+      owner,
+      project.id,
+      invalidKeys.publishVersionAtWriteOverflow,
+      2_147_483_647,
+      siteConfig,
+    ).expect(400);
+    await publishRequest(
+      app,
+      owner,
+      project.id,
+      invalidKeys.publishVersionOutsideInt4,
+      2_147_483_648,
+      siteConfig,
+    ).expect(400);
 
     await request(app.getHttpServer())
       .post(
@@ -1748,40 +1710,63 @@ describe('immutable releases and anonymous public sites HTTP contract', () => {
     const id = projectId(created);
     const operationId = randomUUID();
     const publishedConfig = fixture('v4-bundled-images-valid.json');
+    const raceGate = await installDatabaseRaceGate(pool, id, 'Project');
+    const pointerWrites = await installPointerWriteProbe(pool, id);
+    try {
+      const firstPromise = Promise.resolve(
+        publishRequest(app, owner, id, operationId, 1, publishedConfig),
+      );
+      await raceGate.waitUntilBlocked();
+      const secondPromise = Promise.resolve(
+        publishRequest(
+          app,
+          owner,
+          id,
+          operationId,
+          1,
+          reorderJson(publishedConfig),
+        ),
+      );
+      await waitForAdvisoryLock(
+        pool,
+        idempotencyAdvisoryLockId({
+          scope: `workspace:${owner.workspaceId}:project:${id}`,
+          operation: 'PUBLISH_PROJECT',
+          key: operationId,
+        }),
+        false,
+      );
+      await raceGate.release();
+      const [first, second] = await Promise.all([firstPromise, secondPromise]);
 
-    const [first, second] = await Promise.all([
-      publishRequest(app, owner, id, operationId, 1, publishedConfig),
-      publishRequest(
-        app,
+      expect(first.status).toBe(200);
+      expect(second.status).toBe(200);
+      expect(responseBody(first)).toEqual(responseBody(second));
+      const releaseId = releaseIdFromResponse(first);
+      await expect(artifactCounts(pool, id)).resolves.toEqual({
+        revisions: 2,
+        releases: 1,
+        activeReleases: 1,
+      });
+      await expect(activeRelease(pool, id)).resolves.toMatchObject({
+        releaseId,
+      });
+      await expect(pointerWrites.read()).resolves.toBe(1);
+      await expectOneStoredIdentity(pool, operationId);
+      const audits = await auditRows(pool, owner.workspaceId);
+      expect(audits).toHaveLength(1);
+      const audit = audits[0];
+      if (audit === undefined) throw new Error('Expected publish audit event');
+      expectSafeAuditEvent(
+        audit,
         owner,
-        id,
-        operationId,
-        1,
-        reorderJson(publishedConfig),
-      ),
-    ]);
-
-    expect(first.status).toBe(200);
-    expect(second.status).toBe(200);
-    expect(responseBody(first)).toEqual(responseBody(second));
-    const releaseId = releaseIdFromResponse(first);
-    await expect(artifactCounts(pool, id)).resolves.toEqual({
-      revisions: 2,
-      releases: 1,
-      activeReleases: 1,
-    });
-    await expect(activeRelease(pool, id)).resolves.toMatchObject({ releaseId });
-    await expectOneStoredIdentity(pool, operationId);
-    const audits = await auditRows(pool, owner.workspaceId);
-    expect(audits).toHaveLength(1);
-    const audit = audits[0];
-    if (audit === undefined) throw new Error('Expected publish audit event');
-    expectSafeAuditEvent(
-      audit,
-      owner,
-      [id, releaseId],
-      [responseRequestId(first), responseRequestId(second)],
-    );
+        [id, releaseId],
+        [responseRequestId(first), responseRequestId(second)],
+      );
+    } finally {
+      await raceGate.dispose();
+      await pointerWrites.dispose();
+    }
   });
 
   it('scopes the same idempotency key independently by project, workspace, and publish-versus-activate operation', async () => {
@@ -2015,10 +2000,30 @@ describe('immutable releases and anonymous public sites HTTP contract', () => {
       'Second racer',
     );
 
-    const responses = await Promise.all([
-      publishRequest(app, owner, id, firstKey, 1, firstConfig),
-      publishRequest(app, owner, id, secondKey, 1, secondConfig),
-    ]);
+    const raceGate = await installDatabaseRaceGate(pool, id, 'Project');
+    let responses: readonly request.Response[];
+    try {
+      const firstPromise = Promise.resolve(
+        publishRequest(app, owner, id, firstKey, 1, firstConfig),
+      );
+      await raceGate.waitUntilBlocked();
+      const secondPromise = Promise.resolve(
+        publishRequest(app, owner, id, secondKey, 1, secondConfig),
+      );
+      await waitForAdvisoryLock(
+        pool,
+        idempotencyAdvisoryLockId({
+          scope: `workspace:${owner.workspaceId}:project:${id}`,
+          operation: 'PUBLISH_PROJECT',
+          key: secondKey,
+        }),
+        true,
+      );
+      await raceGate.release();
+      responses = await Promise.all([firstPromise, secondPromise]);
+    } finally {
+      await raceGate.dispose();
+    }
     expect(responses.map(({ status }) => status).sort()).toEqual([200, 409]);
     const rejected = responses.find(({ status }) => status === 409);
     expect(rejected === undefined ? undefined : errorCode(rejected)).toBe(
@@ -2260,11 +2265,30 @@ describe('immutable releases and anonymous public sites HTTP contract', () => {
     const immutableBefore = await persistedProjectSnapshot(pool, project.id);
     const pointerBefore = await activeRelease(pool, project.id);
     const pointerWrites = await installPointerWriteProbe(pool, project.id);
+    const raceGate = await installDatabaseRaceGate(
+      pool,
+      project.id,
+      'ActiveRelease',
+    );
     try {
-      const [first, second] = await Promise.all([
+      const firstPromise = Promise.resolve(
         activateRequest(app, owner, project.id, secondRelease.id, operationId),
+      );
+      await raceGate.waitUntilBlocked();
+      const secondPromise = Promise.resolve(
         activateRequest(app, owner, project.id, secondRelease.id, operationId),
-      ]);
+      );
+      await waitForAdvisoryLock(
+        pool,
+        idempotencyAdvisoryLockId({
+          scope: `workspace:${owner.workspaceId}:project:${project.id}`,
+          operation: 'ACTIVATE_RELEASE',
+          key: operationId,
+        }),
+        false,
+      );
+      await raceGate.release();
+      const [first, second] = await Promise.all([firstPromise, secondPromise]);
 
       expect(first.status).toBe(200);
       expect(second.status).toBe(200);
@@ -2290,6 +2314,7 @@ describe('immutable releases and anonymous public sites HTTP contract', () => {
         [responseRequestId(first), responseRequestId(second)],
       );
     } finally {
+      await raceGate.dispose();
       await pointerWrites.dispose();
     }
   });
@@ -2407,13 +2432,13 @@ describe('immutable releases and anonymous public sites HTTP contract', () => {
   });
 
   it('serves anonymous root and page snapshots with privacy data, no internal leakage, and a stable conditional ETag', async () => {
-    const siteConfig = fixture('v4-bundled-images-valid.json');
+    const siteConfig = fixture('v4-shared-chrome-valid.json');
     const project = await seedReleasedProject(pool, owner, [siteConfig]);
     const release = project.releases[0];
     if (release === undefined) throw new Error('Expected active release');
 
     const root = await publicSiteRequest(app, project.publicSlug).expect(200);
-    expectPublicRepresentation(root, release, configuration, owner, project);
+    expectPublicRepresentation(root, release, configuration);
     const firstEtag = responseEtag(root);
     const repeated = await publicSiteRequest(app, project.publicSlug).expect(
       200,
@@ -2428,32 +2453,40 @@ describe('immutable releases and anonymous public sites HTTP contract', () => {
     const page = await publicPageRequest(
       app,
       project.publicSlug,
-      'home',
+      'shared-2',
     ).expect(200);
-    expectPublicRepresentation(
-      page,
-      release,
-      configuration,
-      owner,
-      project,
-      'home',
-    );
+    expectPublicRepresentation(page, release, configuration, 'shared-2');
     const pageEtag = responseEtag(page);
+    expect(responseBody(page)).not.toEqual(responseBody(root));
+    expect(pageEtag).not.toBe(firstEtag);
     const repeatedPage = await publicPageRequest(
       app,
       project.publicSlug,
-      'home',
+      'shared-2',
     ).expect(200);
     expect(responseBody(repeatedPage)).toEqual(responseBody(page));
     expect(responseEtag(repeatedPage)).toBe(pageEtag);
     const conditionalPage = await publicPageRequest(
       app,
       project.publicSlug,
-      'home',
+      'shared-2',
     )
       .set('If-None-Match', pageEtag)
       .expect(304);
     expect(responseEtag(conditionalPage)).toBe(pageEtag);
+    await publicPageRequest(app, project.publicSlug, 'shared-2')
+      .set('If-None-Match', firstEtag)
+      .expect(200);
+    await publicSiteRequest(app, project.publicSlug)
+      .set('If-None-Match', pageEtag)
+      .expect(200);
+  });
+
+  it('returns the uniform not-found envelope for a percent-encoded NUL public slug', async () => {
+    const malformed = await publicSiteRequest(app, '%00').expect(404);
+
+    expect(errorCode(malformed)).toBe('NOT_FOUND');
+    expect(Object.keys(responseBody(malformed))).toEqual(['error']);
   });
 
   it('keeps public output and its ETag immutable when later draft edits advance the project', async () => {
@@ -2491,17 +2524,10 @@ describe('immutable releases and anonymous public sites HTTP contract', () => {
 
     expect(responseBody(after)).toEqual(responseBody(before));
     expect(responseEtag(after)).toBe(beforeEtag);
-    expectPublicRepresentation(after, release, configuration, owner, project);
+    expectPublicRepresentation(after, release, configuration);
     expect(responseBody(pageAfter)).toEqual(responseBody(pageBefore));
     expect(responseEtag(pageAfter)).toBe(pageBeforeEtag);
-    expectPublicRepresentation(
-      pageAfter,
-      release,
-      configuration,
-      owner,
-      project,
-      'minimal',
-    );
+    expectPublicRepresentation(pageAfter, release, configuration, 'minimal');
     const stored = await pool.query<{
       draft: unknown;
       draftVersion: number;
@@ -2541,13 +2567,7 @@ describe('immutable releases and anonymous public sites HTTP contract', () => {
     expect(oldRelease.siteConfig).toEqual(newRelease.siteConfig);
     const immutableBefore = await persistedProjectSnapshot(pool, project.id);
     const before = await publicSiteRequest(app, project.publicSlug).expect(200);
-    expectPublicRepresentation(
-      before,
-      newRelease,
-      configuration,
-      owner,
-      project,
-    );
+    expectPublicRepresentation(before, newRelease, configuration);
     const beforeEtag = responseEtag(before);
     const pageBefore = await publicPageRequest(
       app,
@@ -2558,8 +2578,6 @@ describe('immutable releases and anonymous public sites HTTP contract', () => {
       pageBefore,
       newRelease,
       configuration,
-      owner,
-      project,
       'minimal',
     );
     const pageBeforeEtag = responseEtag(pageBefore);
@@ -2580,23 +2598,10 @@ describe('immutable releases and anonymous public sites HTTP contract', () => {
       'minimal',
     ).expect(200);
 
-    expectPublicRepresentation(
-      after,
-      oldRelease,
-      configuration,
-      owner,
-      project,
-    );
+    expectPublicRepresentation(after, oldRelease, configuration);
     expect(responseBody(after)).not.toEqual(responseBody(before));
     expect(responseEtag(after)).not.toBe(beforeEtag);
-    expectPublicRepresentation(
-      pageAfter,
-      oldRelease,
-      configuration,
-      owner,
-      project,
-      'minimal',
-    );
+    expectPublicRepresentation(pageAfter, oldRelease, configuration, 'minimal');
     expect(responseBody(pageAfter)).not.toEqual(responseBody(pageBefore));
     expect(responseEtag(pageAfter)).not.toBe(pageBeforeEtag);
     await expect(activeRelease(pool, project.id)).resolves.toMatchObject({
@@ -2631,13 +2636,7 @@ describe('immutable releases and anonymous public sites HTTP contract', () => {
     const known = await publicSiteRequest(app, ownProject.publicSlug).expect(
       200,
     );
-    expectPublicRepresentation(
-      known,
-      ownRelease,
-      configuration,
-      owner,
-      ownProject,
-    );
+    expectPublicRepresentation(known, ownRelease, configuration);
     expect(JSON.stringify(responseBody(known))).not.toContain(
       foreignRelease.id,
     );

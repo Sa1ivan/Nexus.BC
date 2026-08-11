@@ -193,6 +193,7 @@ export class PublishProject {
       this.repository,
       input.workspaceId,
       input.projectId,
+      { operationId: `PUBLISH_PROJECT:${input.operationId}` },
     );
   }
 

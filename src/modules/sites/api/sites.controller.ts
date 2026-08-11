@@ -20,6 +20,7 @@ import {
 import { createApiHttpException } from '../../../shared/http/api-error.filter';
 import {
   requireEditorPageInput,
+  requireExpectedDraftVersion,
   requireIdempotencyKey,
   requireProjectName,
   requireUuidPath,
@@ -28,7 +29,6 @@ import {
 import {
   exactRequestBody,
   requireAllowedOrigin,
-  throwRequestValidationError,
 } from '../../../shared/http/request-contract';
 import { ensureResponseRequestId } from '../../../shared/http/request-id.middleware';
 import {
@@ -163,19 +163,15 @@ export class SitesController {
       'expectedDraftVersion',
       'siteConfig',
     ]);
-    const expectedDraftVersion = input['expectedDraftVersion'];
-    if (
-      !Number.isSafeInteger(expectedDraftVersion) ||
-      Number(expectedDraftVersion) < 1
-    ) {
-      throwRequestValidationError();
-    }
+    const expectedDraftVersion = requireExpectedDraftVersion(
+      input['expectedDraftVersion'],
+    );
     return this.saveProjectDraft.execute({
       workspaceId,
       projectId,
       userId: actor.userId,
       operationId,
-      expectedDraftVersion: Number(expectedDraftVersion),
+      expectedDraftVersion,
       siteConfig: input['siteConfig'],
     });
   }
@@ -206,20 +202,16 @@ export class SitesController {
       'expectedDraftVersion',
       'siteConfig',
     ]);
-    const expectedDraftVersion = input['expectedDraftVersion'];
-    if (
-      !Number.isSafeInteger(expectedDraftVersion) ||
-      Number(expectedDraftVersion) < 1
-    ) {
-      throwRequestValidationError();
-    }
+    const expectedDraftVersion = requireExpectedDraftVersion(
+      input['expectedDraftVersion'],
+    );
     return this.publishProject.execute({
       workspaceId,
       projectId,
       userId: actor.userId,
       operationId,
       requestId: ensureResponseRequestId(response),
-      expectedDraftVersion: Number(expectedDraftVersion),
+      expectedDraftVersion,
       siteConfig: input['siteConfig'],
     });
   }
