@@ -14,6 +14,7 @@ import {
   AUDIT_WRITER,
   type AuditWriter,
   type LeadSubmittedAuditEvent,
+  type MediaDeletionMarkedAuditEvent,
 } from '../../src/shared/audit/audit-writer';
 
 interface Deferred<T> {
@@ -45,6 +46,19 @@ function leadSubmittedEvent(
     },
     requestId: randomUUID(),
     ...overrides,
+  };
+}
+
+function mediaDeletionMarkedEvent(): MediaDeletionMarkedAuditEvent {
+  return {
+    eventId: randomUUID(),
+    workspaceId: randomUUID(),
+    actorUserId: randomUUID(),
+    action: 'MEDIA_DELETION_MARKED',
+    resourceType: 'MediaAsset',
+    resourceId: randomUUID(),
+    metadata: { outcome: 'deleting' },
+    requestId: randomUUID(),
   };
 }
 
@@ -130,6 +144,44 @@ describe('transactional append-only audit sequence', () => {
     await expect(
       prisma.auditSequence.findUniqueOrThrow({ where: { id: 1 } }),
     ).resolves.toMatchObject({ nextValue: 1n });
+  });
+
+  it('allows only outcome metadata for media deletion audit events', async () => {
+    const event = mediaDeletionMarkedEvent();
+    await transactions.run((context) => auditWriter.append(context, event));
+
+    await expect(
+      prisma.auditEvent.findUniqueOrThrow({
+        where: { eventId: event.eventId },
+        select: { action: true, resourceType: true, metadata: true },
+      }),
+    ).resolves.toEqual({
+      action: 'MEDIA_DELETION_MARKED',
+      resourceType: 'MediaAsset',
+      metadata: { outcome: 'deleting' },
+    });
+
+    const unsafe = {
+      ...mediaDeletionMarkedEvent(),
+      metadata: {
+        outcome: 'deleting',
+        objectKey: 'workspaces/private/object.png',
+      },
+    } as unknown as MediaDeletionMarkedAuditEvent;
+    await expect(
+      transactions.run((context) => auditWriter.append(context, unsafe)),
+    ).rejects.toThrow('not allowlisted');
+
+    const unsafeRequestId = {
+      ...mediaDeletionMarkedEvent(),
+      requestId: 'workspaces/private/object.png',
+    };
+    await expect(
+      transactions.run((context) =>
+        auditWriter.append(context, unsafeRequestId),
+      ),
+    ).rejects.toThrow('not allowlisted');
+    await expect(prisma.auditEvent.count()).resolves.toBe(1);
   });
 
   it('rejects non-UUID release metadata that could disguise contact data', async () => {

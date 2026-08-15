@@ -2,7 +2,9 @@ export type SitesApplicationErrorCode =
   | 'VALIDATION_ERROR'
   | 'NOT_FOUND'
   | 'IDEMPOTENCY_KEY_REUSED'
-  | 'PROJECT_VERSION_CONFLICT';
+  | 'PROJECT_VERSION_CONFLICT'
+  | 'MEDIA_ASSET_NOT_READY'
+  | 'MEDIA_IMPORT_INVALID';
 
 export class SitesApplicationError extends Error {
   constructor(

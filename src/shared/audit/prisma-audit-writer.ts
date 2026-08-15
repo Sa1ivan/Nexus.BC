@@ -4,6 +4,8 @@ import type {
   AuditEventRequest,
   AuditWriter,
   LeadSubmittedAuditEvent,
+  MediaDeletionMarkedAuditEvent,
+  MediaVerifiedAuditEvent,
   MembershipRoleChangedAuditEvent,
   ProjectPublishedAuditEvent,
   ReleaseActivatedAuditEvent,
@@ -105,6 +107,28 @@ function assertReleaseAuditEvent(
   }
 }
 
+function assertMediaAuditEvent(
+  event: MediaVerifiedAuditEvent | MediaDeletionMarkedAuditEvent,
+): void {
+  const expectedOutcome =
+    event.action === 'MEDIA_VERIFIED' ? 'ready' : 'deleting';
+  if (
+    !uuidPattern.test(event.workspaceId) ||
+    !uuidPattern.test(event.actorUserId) ||
+    event.resourceType !== 'MediaAsset' ||
+    !uuidPattern.test(event.resourceId) ||
+    typeof event.requestId !== 'string' ||
+    !uuidPattern.test(event.requestId) ||
+    typeof event.metadata !== 'object' ||
+    event.metadata === null ||
+    Array.isArray(event.metadata) ||
+    Object.keys(event.metadata).join(',') !== 'outcome' ||
+    event.metadata.outcome !== expectedOutcome
+  ) {
+    throw new Error(`${event.action} event is not allowlisted`);
+  }
+}
+
 function unsupportedAuditAction(event: never): never {
   const action = (event as { readonly action?: unknown }).action;
   throw new Error(`Audit action is not allowlisted: ${String(action)}`);
@@ -130,6 +154,9 @@ function auditMetadata(
         projectId: event.metadata.projectId,
         version: event.metadata.version,
       };
+    case 'MEDIA_VERIFIED':
+    case 'MEDIA_DELETION_MARKED':
+      return { outcome: event.metadata.outcome };
     default:
       return unsupportedAuditAction(event);
   }
@@ -153,6 +180,10 @@ export class PrismaAuditWriter implements AuditWriter {
       case 'PROJECT_PUBLISHED':
       case 'RELEASE_ACTIVATED':
         assertReleaseAuditEvent(event);
+        break;
+      case 'MEDIA_VERIFIED':
+      case 'MEDIA_DELETION_MARKED':
+        assertMediaAuditEvent(event);
         break;
       default:
         return unsupportedAuditAction(event);

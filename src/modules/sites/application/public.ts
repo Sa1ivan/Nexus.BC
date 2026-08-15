@@ -1,3 +1,22 @@
+import type { TransactionContext } from '../../../shared/database/transaction-runner';
+
+export const SITES_RETAINED_MEDIA_REFERENCE = Symbol(
+  'SitesRetainedMediaReference',
+);
+
+export interface RetainedMediaReferenceInput {
+  readonly workspaceId: string;
+  readonly projectId: string;
+  readonly assetId: string;
+}
+
+export interface SitesRetainedMediaReference {
+  hasRetainedReference(
+    context: TransactionContext,
+    input: RetainedMediaReferenceInput,
+  ): Promise<boolean>;
+}
+
 export interface EditorProjectDto {
   readonly id: string;
   readonly workspaceId: string;
@@ -5,7 +24,7 @@ export interface EditorProjectDto {
   readonly publicSlug: string;
   readonly publicUrl: string;
   readonly siteConfig: Readonly<Record<string, unknown>>;
-  readonly draftSchemaVersion: 4;
+  readonly draftSchemaVersion: 4 | 5;
   readonly draftVersion: number;
 }
 
@@ -22,7 +41,7 @@ export interface ProjectRevisionMetadataDto {
   readonly id: string;
   readonly projectId: string;
   readonly version: number;
-  readonly schemaVersion: 4;
+  readonly schemaVersion: 4 | 5;
   readonly createdAt: string;
 }
 
@@ -30,7 +49,7 @@ export interface ReleaseResultDto {
   readonly releaseId: string;
   readonly projectId: string;
   readonly version: number;
-  readonly schemaVersion: 4;
+  readonly schemaVersion: 4 | 5;
 }
 
 export interface CursorPageDto<T> {

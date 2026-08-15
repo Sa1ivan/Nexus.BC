@@ -3,6 +3,8 @@ import type { Project } from '../domain/project';
 import type { ProjectRevision } from '../domain/project-revision';
 import type { Release } from '../domain/release';
 import type { SiteConfigDocument } from '../domain/site-config-v4';
+import type { CanonicalSiteConfigInput } from '../domain/site-config-write-handlers';
+import type { SiteConfigSchemaVersion } from '../../../shared/config/site-config-rollout';
 
 export const SITE_REPOSITORY = Symbol('SiteRepository');
 
@@ -12,7 +14,7 @@ export interface CreateProjectRecord {
   readonly operationId: string;
   readonly name: string;
   readonly publicSlug: string;
-  readonly siteConfig: SiteConfigDocument;
+  readonly siteConfig: CanonicalSiteConfigInput;
 }
 
 export interface SaveDraftRecord {
@@ -20,7 +22,7 @@ export interface SaveDraftRecord {
   readonly projectId: string;
   readonly operationId: string;
   readonly expectedDraftVersion: number;
-  readonly siteConfig: SiteConfigDocument;
+  readonly siteConfig: CanonicalSiteConfigInput;
 }
 
 export interface PublishProjectRecord {
@@ -28,7 +30,7 @@ export interface PublishProjectRecord {
   readonly projectId: string;
   readonly operationId: string;
   readonly expectedDraftVersion: number;
-  readonly siteConfig: SiteConfigDocument;
+  readonly siteConfig: CanonicalSiteConfigInput;
 }
 
 export interface ActivateReleaseRecord {
@@ -37,11 +39,19 @@ export interface ActivateReleaseRecord {
   readonly releaseId: string;
 }
 
+export interface FindReleaseForActivationRecord {
+  readonly workspaceId: string;
+  readonly projectId: string;
+  readonly releaseId: string;
+}
+
 export interface PublicReleaseSnapshot {
   readonly id: string;
+  readonly workspaceId: string;
+  readonly projectId: string;
   readonly version: number;
   readonly siteConfig: SiteConfigDocument;
-  readonly schemaVersion: 4;
+  readonly schemaVersion: SiteConfigSchemaVersion;
 }
 
 export interface ProjectSummary {
@@ -119,6 +129,10 @@ export interface SiteRepository {
     context: TransactionContext,
     input: ActivateReleaseRecord,
   ): Promise<ActivateReleaseResult>;
+  findReleaseForActivation(
+    context: TransactionContext,
+    input: FindReleaseForActivationRecord,
+  ): Promise<Release | null>;
   listRevisions(
     workspaceId: string,
     projectId: string,

@@ -51,11 +51,32 @@ export interface ReleaseActivatedAuditEvent extends ReleaseAuditEventBase {
   readonly action: 'RELEASE_ACTIVATED';
 }
 
+interface MediaAuditEventBase {
+  readonly eventId: string;
+  readonly workspaceId: string;
+  readonly actorUserId: string;
+  readonly resourceType: 'MediaAsset';
+  readonly resourceId: string;
+  readonly requestId: string;
+}
+
+export interface MediaVerifiedAuditEvent extends MediaAuditEventBase {
+  readonly action: 'MEDIA_VERIFIED';
+  readonly metadata: { readonly outcome: 'ready' };
+}
+
+export interface MediaDeletionMarkedAuditEvent extends MediaAuditEventBase {
+  readonly action: 'MEDIA_DELETION_MARKED';
+  readonly metadata: { readonly outcome: 'deleting' };
+}
+
 export type AuditEventRequest =
   | LeadSubmittedAuditEvent
   | MembershipRoleChangedAuditEvent
   | ProjectPublishedAuditEvent
-  | ReleaseActivatedAuditEvent;
+  | ReleaseActivatedAuditEvent
+  | MediaVerifiedAuditEvent
+  | MediaDeletionMarkedAuditEvent;
 
 export interface AppendedAuditEvent {
   readonly eventId: string;

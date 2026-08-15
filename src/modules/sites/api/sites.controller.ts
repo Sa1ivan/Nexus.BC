@@ -29,6 +29,7 @@ import {
 import {
   exactRequestBody,
   requireAllowedOrigin,
+  throwRequestValidationError,
 } from '../../../shared/http/request-contract';
 import { ensureResponseRequestId } from '../../../shared/http/request-id.middleware';
 import {
@@ -40,8 +41,14 @@ import { ActivateRelease } from '../application/activate-release';
 import { GetProject } from '../application/get-project';
 import { ListProjectRevisions } from '../application/list-project-revisions';
 import { ListProjectSummaries } from '../application/list-project-summaries';
-import { SaveProjectDraft } from '../application/save-project-draft';
-import { PublishProject } from '../application/publish-project';
+import {
+  SAVE_PROJECT_DRAFT,
+  SaveProjectDraft,
+} from '../application/save-project-draft';
+import {
+  PUBLISH_PROJECT,
+  PublishProject,
+} from '../application/publish-project';
 import { SitesApplicationErrorInterceptor } from './sites-application-error.interceptor';
 
 type AuthenticatedRequest = Request & {
@@ -54,9 +61,11 @@ export class SitesController {
   constructor(
     private readonly createProject: CreateProject,
     private readonly getProject: GetProject,
+    @Inject(SAVE_PROJECT_DRAFT)
     private readonly saveProjectDraft: SaveProjectDraft,
     private readonly listProjectSummaries: ListProjectSummaries,
     private readonly listProjectRevisions: ListProjectRevisions,
+    @Inject(PUBLISH_PROJECT)
     private readonly publishProject: PublishProject,
     private readonly activateRelease: ActivateRelease,
     @Inject(APP_CONFIG) private readonly configuration: AppConfig,
@@ -81,13 +90,34 @@ export class SitesController {
     requireValidClientCapabilities(request);
     requireAllowedOrigin(request, this.configuration.webOrigins);
     const operationId = requireIdempotencyKey(request);
-    const input = exactRequestBody(body, ['name', 'siteConfig']);
+    const hasMediaImportBatchId =
+      typeof body === 'object' &&
+      body !== null &&
+      !Array.isArray(body) &&
+      Object.prototype.hasOwnProperty.call(body, 'mediaImportBatchId');
+    const input = exactRequestBody(
+      body,
+      hasMediaImportBatchId
+        ? ['name', 'siteConfig', 'mediaImportBatchId']
+        : ['name', 'siteConfig'],
+    );
+    const mediaImportBatchId = input['mediaImportBatchId'];
+    if (
+      mediaImportBatchId !== undefined &&
+      (typeof mediaImportBatchId !== 'string' ||
+        !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu.test(
+          mediaImportBatchId,
+        ))
+    ) {
+      throwRequestValidationError();
+    }
     return this.createProject.execute({
       workspaceId,
       userId: actor.userId,
       operationId,
       name: requireProjectName(input['name']),
       siteConfig: input['siteConfig'],
+      ...(typeof mediaImportBatchId === 'string' ? { mediaImportBatchId } : {}),
     });
   }
 

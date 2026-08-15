@@ -6,15 +6,22 @@ import {
 } from '../../../shared/audit/audit-writer';
 import { IdempotencyCoordinator } from '../../../shared/idempotency/idempotency-coordinator';
 import type { StoredIdempotencyRecord } from '../../../shared/idempotency/idempotency-store';
+import {
+  MEDIA_MANAGED_REFERENCE_VALIDATION,
+  type MediaManagedReferenceValidation,
+} from '../../media/application/public';
+import { managedMediaAssetIds } from './managed-media-references';
 import type { ReleaseResultDto } from './public';
 import { releaseResultDto, replayReleaseResult } from './release-result';
 import { SiteAccessPolicy } from './site-access-policy';
+import { SitesProjectTransactionLock } from './sites-project-transaction-lock';
 import { SitesApplicationError } from './sites-errors';
 import { SITE_REPOSITORY, type SiteRepository } from './sites.ports';
 
 type ActivateReleaseOutcome =
   | { readonly kind: 'activated'; readonly release: ReleaseResultDto }
-  | { readonly kind: 'not-found' };
+  | { readonly kind: 'not-found' }
+  | { readonly kind: 'media-not-ready' };
 
 function hasExactFields(value: object, fields: readonly string[]): boolean {
   return Object.keys(value).sort().join(',') === [...fields].sort().join(',');
@@ -47,6 +54,9 @@ export class ActivateRelease {
     private readonly access: SiteAccessPolicy,
     private readonly idempotency: IdempotencyCoordinator,
     @Inject(AUDIT_WRITER) private readonly audit: AuditWriter,
+    private readonly projectLock: SitesProjectTransactionLock,
+    @Inject(MEDIA_MANAGED_REFERENCE_VALIDATION)
+    private readonly media: MediaManagedReferenceValidation,
   ) {}
 
   async execute(input: {
@@ -71,6 +81,42 @@ export class ActivateRelease {
         releaseId: input.releaseId,
       },
       command: async (context) => {
+        await this.projectLock.acquire(context, input.projectId);
+        const releaseForActivation =
+          await this.repository.findReleaseForActivation(context, input);
+        if (releaseForActivation === null) {
+          return {
+            httpStatus: 404,
+            responseBody: {
+              code: 'NOT_FOUND',
+              workspaceId: input.workspaceId,
+              projectId: input.projectId,
+              releaseId: input.releaseId,
+            },
+            resourceId: null,
+            result: { kind: 'not-found' } as const,
+          };
+        }
+        const media = await this.media.validate(context, {
+          workspaceId: input.workspaceId,
+          projectId: input.projectId,
+          referencedAssetIds: managedMediaAssetIds(
+            releaseForActivation.siteConfig,
+          ),
+        });
+        if (media.kind === 'not-ready') {
+          return {
+            httpStatus: 409,
+            responseBody: {
+              code: 'MEDIA_ASSET_NOT_READY',
+              workspaceId: input.workspaceId,
+              projectId: input.projectId,
+              releaseId: input.releaseId,
+            },
+            resourceId: input.releaseId,
+            result: { kind: 'media-not-ready' } as const,
+          };
+        }
         const activated = await this.repository.activateRelease(context, {
           workspaceId: input.workspaceId,
           projectId: input.projectId,
@@ -119,6 +165,9 @@ export class ActivateRelease {
       if (execution.result.kind === 'not-found') {
         throw new SitesApplicationError('NOT_FOUND');
       }
+      if (execution.result.kind === 'media-not-ready') {
+        throw new SitesApplicationError('MEDIA_ASSET_NOT_READY');
+      }
       return execution.result.release;
     }
     const code = execution.record.responseBody.code;
@@ -130,6 +179,9 @@ export class ActivateRelease {
         input.releaseId,
       );
       throw new SitesApplicationError('NOT_FOUND');
+    }
+    if (code === 'MEDIA_ASSET_NOT_READY') {
+      throw new SitesApplicationError('MEDIA_ASSET_NOT_READY');
     }
     if (code !== undefined) {
       throw new Error('Stored idempotency result is invalid');

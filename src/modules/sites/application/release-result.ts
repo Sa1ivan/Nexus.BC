@@ -17,6 +17,13 @@ function requiredPositiveInteger(value: unknown, field: string): number {
   return Number(value);
 }
 
+function requiredSchemaVersion(value: unknown): 4 | 5 {
+  if (value !== 4 && value !== 5) {
+    throw new Error('Stored idempotency schema version is invalid');
+  }
+  return value;
+}
+
 function hasExactFields(value: object, fields: readonly string[]): boolean {
   return Object.keys(value).sort().join(',') === [...fields].sort().join(',');
 }
@@ -44,6 +51,7 @@ export async function replayReleaseResult(
   const releaseId = requiredString(body.releaseId, 'release id');
   const storedProjectId = requiredString(body.projectId, 'project id');
   const version = requiredPositiveInteger(body.version, 'release version');
+  const schemaVersion = requiredSchemaVersion(body.schemaVersion);
   if (
     record.httpStatus !== 200 ||
     record.resourceId !== releaseId ||
@@ -53,7 +61,6 @@ export async function replayReleaseResult(
       'schemaVersion',
       'version',
     ]) ||
-    body.schemaVersion !== 4 ||
     storedProjectId !== projectId ||
     (expectations.releaseId !== undefined &&
       releaseId !== expectations.releaseId)
@@ -68,7 +75,7 @@ export async function replayReleaseResult(
   if (
     release === null ||
     release.version !== version ||
-    release.schemaVersion !== 4
+    release.schemaVersion !== schemaVersion
   ) {
     throw new Error('Stored idempotency release snapshot is unavailable');
   }

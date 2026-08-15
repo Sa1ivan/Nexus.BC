@@ -1,4 +1,6 @@
 import { randomUUID } from 'node:crypto';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import type { TransactionContext } from '../../src/shared/database/transaction-runner';
 
 export type SiteConfigDocument = Readonly<Record<string, unknown>>;
@@ -109,11 +111,25 @@ export interface SiteRepositoryDriver {
 export type SiteRepositoryDriverFactory = () => Promise<SiteRepositoryDriver>;
 
 function siteConfig(name: string): SiteConfigDocument {
+  const fixture: unknown = JSON.parse(
+    readFileSync(
+      resolve('contracts/site-config/fixtures/v4-minimal-valid.json'),
+      'utf8',
+    ),
+  );
+  if (
+    typeof fixture !== 'object' ||
+    fixture === null ||
+    Array.isArray(fixture)
+  ) {
+    throw new Error(
+      'Expected the SiteConfig v4 contract fixture to be an object',
+    );
+  }
   return {
+    ...(fixture as Record<string, unknown>),
     id: `site-${name}`,
-    schemaVersion: 4,
     name,
-    pages: [{ id: `page-${name}`, slug: name, blocks: [] }],
   };
 }
 

@@ -42,6 +42,24 @@ export class SitesApplicationErrorInterceptor implements NestInterceptor {
             ),
           );
         }
+        if (error.code === 'MEDIA_ASSET_NOT_READY') {
+          return throwError(() =>
+            createApiHttpException(
+              409,
+              'MEDIA_ASSET_NOT_READY',
+              'A managed media asset is not ready',
+            ),
+          );
+        }
+        if (error.code === 'MEDIA_IMPORT_INVALID') {
+          return throwError(() =>
+            createApiHttpException(
+              409,
+              'MEDIA_IMPORT_INVALID',
+              'The media import batch cannot be attached',
+            ),
+          );
+        }
         return throwError(() =>
           createApiHttpException(
             409,
