@@ -2,6 +2,7 @@ declare const objectStorageKeyBrand: unique symbol;
 
 export const OBJECT_STORAGE = Symbol('ObjectStorage');
 export const OBJECT_STORAGE_PRESIGNED_PUT_TTL_SECONDS = 300;
+export const OBJECT_STORAGE_PRESIGNED_GET_TTL_SECONDS = 600;
 export const OBJECT_STORAGE_CREATE_ONLY_WRITE_CONDITION =
   'object-must-not-exist';
 
@@ -44,6 +45,16 @@ export interface PresignedPut {
   readonly expiresAt: Date;
 }
 
+export interface PresignedGetInput {
+  readonly key: ObjectStorageKey;
+  readonly expiresInSeconds: typeof OBJECT_STORAGE_PRESIGNED_GET_TTL_SECONDS;
+}
+
+export interface PresignedGet {
+  readonly url: string;
+  readonly expiresAt: Date;
+}
+
 export interface StoredObjectMetadata {
   readonly contentLength: number;
   readonly contentType: string | null;
@@ -75,6 +86,7 @@ export type BoundedObjectReadResult =
 
 export interface ObjectStorage {
   createPresignedPut(input: PresignedPutInput): Promise<PresignedPut>;
+  createPresignedGet(input: PresignedGetInput): Promise<PresignedGet>;
   head(key: ObjectStorageKey): Promise<ObjectHeadResult>;
   readBounded(input: BoundedObjectReadInput): Promise<BoundedObjectReadResult>;
   delete(key: ObjectStorageKey): Promise<void>;

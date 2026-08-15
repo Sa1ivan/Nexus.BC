@@ -4,6 +4,7 @@ import { resolve } from 'node:path';
 import { Test, type TestingModule } from '@nestjs/testing';
 import { Pool } from 'pg';
 import { PrismaModule } from '../../src/shared/database/prisma.module';
+import { SiteConfigRolloutGuard } from '../../src/modules/sites/infrastructure/site-config-rollout-guard';
 import {
   TransactionRunner,
   type TransactionContext,
@@ -270,6 +271,49 @@ interface PrismaRepositoryModule {
   readonly PrismaSiteRepository?: SiteRepositoryConstructor;
 }
 
+type VersionedCreateProjectRecord = Omit<CreateProjectRecord, 'siteConfig'> & {
+  readonly siteConfig: {
+    readonly document: SiteConfigDocument;
+    readonly schemaVersion: 4;
+  };
+};
+
+type VersionedSaveDraftRecord = Omit<SaveDraftRecord, 'siteConfig'> & {
+  readonly siteConfig: {
+    readonly document: SiteConfigDocument;
+    readonly schemaVersion: 4;
+  };
+};
+
+interface VersionedPrismaSiteRepository {
+  create(
+    context: TransactionContext,
+    input: VersionedCreateProjectRecord,
+  ): Promise<StoredProject>;
+  findForWorkspace(
+    workspaceId: string,
+    projectId: string,
+  ): Promise<StoredProject | null>;
+  findRevisionForWorkspace(
+    workspaceId: string,
+    projectId: string,
+    version: number,
+  ): Promise<StoredProjectRevision | null>;
+  saveDraft(
+    context: TransactionContext,
+    input: VersionedSaveDraftRecord,
+  ): Promise<SaveDraftResult>;
+  listRevisions(
+    workspaceId: string,
+    projectId: string,
+    page?: CursorInput,
+  ): Promise<CursorPage<StoredProjectRevision>>;
+  listProjectSummaries(
+    workspaceId: string,
+    page?: CursorInput,
+  ): Promise<CursorPage<ProjectSummary>>;
+}
+
 function missingPrismaRepository(): SiteRepositoryContract {
   const missing = (): never => {
     throw new Error('PrismaSiteRepository is not implemented');
@@ -315,11 +359,31 @@ async function prismaDriver(): Promise<SiteRepositoryDriver> {
   await pool.query('DELETE FROM "Workspace"');
   const moduleFixture: TestingModule = await Test.createTestingModule({
     imports: [PrismaModule],
-    providers: [repositoryConstructor],
+    providers: [repositoryConstructor, SiteConfigRolloutGuard],
   }).compile();
-  const repository = moduleFixture.get<SiteRepositoryContract>(
+  const implementation = moduleFixture.get<VersionedPrismaSiteRepository>(
     repositoryConstructor,
   );
+  const repository: SiteRepositoryContract = {
+    create: (context, input) =>
+      implementation.create(context, {
+        ...input,
+        siteConfig: { document: input.siteConfig, schemaVersion: 4 },
+      }),
+    findForWorkspace: (workspaceId, projectId) =>
+      implementation.findForWorkspace(workspaceId, projectId),
+    findRevisionForWorkspace: (workspaceId, projectId, version) =>
+      implementation.findRevisionForWorkspace(workspaceId, projectId, version),
+    saveDraft: (context, input) =>
+      implementation.saveDraft(context, {
+        ...input,
+        siteConfig: { document: input.siteConfig, schemaVersion: 4 },
+      }),
+    listRevisions: (workspaceId, projectId, page) =>
+      implementation.listRevisions(workspaceId, projectId, page),
+    listProjectSummaries: (workspaceId, page) =>
+      implementation.listProjectSummaries(workspaceId, page),
+  };
   const transactions = moduleFixture.get(TransactionRunner);
 
   return {

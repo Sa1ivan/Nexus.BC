@@ -45,4 +45,36 @@ export class TransactionRunner {
     }
     return work(client);
   }
+
+  async executeRawUnsafe(
+    context: TransactionContext,
+    query: string,
+    ...values: readonly unknown[]
+  ): Promise<number> {
+    return this[PrismaTransactionClientService](context, async (client) => {
+      const transaction = client as {
+        $executeRawUnsafe(
+          statement: string,
+          ...parameters: readonly unknown[]
+        ): Promise<number>;
+      };
+      return transaction.$executeRawUnsafe(query, ...values);
+    });
+  }
+
+  async queryRawUnsafe<T>(
+    context: TransactionContext,
+    query: string,
+    ...values: readonly unknown[]
+  ): Promise<T> {
+    return this[PrismaTransactionClientService](context, async (client) => {
+      const transaction = client as {
+        $queryRawUnsafe<TResult>(
+          statement: string,
+          ...parameters: readonly unknown[]
+        ): Promise<TResult>;
+      };
+      return transaction.$queryRawUnsafe<T>(query, ...values);
+    });
+  }
 }

@@ -76,6 +76,7 @@ function target(asset: MediaAsset): MediaCompletionTarget {
         : {
             expiresAt: new Date('2026-08-12T12:00:00.000Z'),
             attachedAt: null,
+            cleanupStartedAt: null,
           },
   };
 }
@@ -107,6 +108,10 @@ class FakeObjectStorage implements ObjectStorage {
   };
 
   createPresignedPut(): Promise<never> {
+    return Promise.reject(new Error('not used'));
+  }
+
+  createPresignedGet(): Promise<never> {
     return Promise.reject(new Error('not used'));
   }
 
@@ -276,6 +281,7 @@ describe('CompleteMediaUpload', () => {
       importBatch: {
         expiresAt: new Date('2000-01-01T00:00:00.000Z'),
         attachedAt: null,
+        cleanupStartedAt: null,
       },
     };
     await expect(

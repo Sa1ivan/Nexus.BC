@@ -60,17 +60,24 @@ export class CompleteMediaUpload {
     const target = await this.repository.findCompletionTarget(input);
     if (target === null) return { kind: 'not-found' };
 
+    const storageOwner: MediaObjectOwner =
+      target.asset.importBatchId === null
+        ? input.owner
+        : { kind: 'import', batchId: target.asset.importBatchId };
     const importBatch =
-      input.owner.kind === 'import' ? target.importBatch : null;
-    if (input.owner.kind === 'import' && importBatch === null) {
+      target.asset.importBatchId === null ? null : target.importBatch;
+    if (target.asset.importBatchId !== null && importBatch === null) {
       throw new Error('Stored import media asset has no import batch');
+    }
+    if (importBatch !== null && importBatch.cleanupStartedAt !== null) {
+      return { kind: 'state-conflict' };
     }
 
     const key = restorePersistedMediaObjectKey({
       key: target.asset.objectKey,
       workspaceId: input.workspaceId,
       assetId: input.assetId,
-      owner: input.owner,
+      owner: storageOwner,
     });
 
     if (target.asset.status === 'READY') {
@@ -106,7 +113,7 @@ export class CompleteMediaUpload {
       stored.kind === 'too-large' ||
       stored.metadata.contentLength > MEDIA_MAX_BYTES
     ) {
-      return { kind: 'rejected', code: 'media-too-large' };
+      return this.rejectAndRetain(key, 'media-too-large');
     }
 
     const result = await verifyMediaContent(
@@ -116,7 +123,7 @@ export class CompleteMediaUpload {
       },
       this.inspector,
     );
-    if (!result.ok) return { kind: 'rejected', code: result.code };
+    if (!result.ok) return this.rejectAndRetain(key, result.code);
 
     const verification: MediaVerification = {
       ...result.value,
@@ -159,5 +166,17 @@ export class CompleteMediaUpload {
         verification,
       };
     });
+  }
+
+  private async rejectAndRetain(
+    key: Parameters<ObjectStorage['delete']>[0],
+    code: VerificationFailureCode,
+  ): Promise<CompleteMediaUploadResult> {
+    try {
+      await this.storage.delete(key);
+    } catch {
+      // Keep the PENDING row as the durable cleanup record when storage is unavailable.
+    }
+    return { kind: 'rejected', code };
   }
 }

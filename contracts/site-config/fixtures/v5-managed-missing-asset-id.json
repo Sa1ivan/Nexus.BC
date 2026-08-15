@@ -119,7 +119,7 @@
           "buttonText": "Начать",
           "buttonHref": "#lead-form",
           "media": {
-            "src": "https://cdn.example.com/managed.webp",
+            "kind": "managed",
             "alt": "Managed media"
           },
           "styles": {

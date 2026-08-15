@@ -10,7 +10,7 @@ import {
 
 const contractRoot = join(process.cwd(), 'contracts/site-config');
 const mirroredManifestSha256 =
-  '5555fca3001240dbc982f1608f8c365985e4052752fffffcffae9bfc0a167477';
+  'e0c1d861d1da41572ac19914d2afbbe326aa6c72e5ea80727f7b7f900bb84071';
 const requiredFixtureNames = [
   'future-version-rejected.json',
   'legacy-v1-import.json',
@@ -77,6 +77,7 @@ describe('SiteConfig v4 cloud contract', () => {
     const manifestPaths = manifest.split('\n').map((line) => line.slice(66));
     const actualPaths = [
       'v4.schema.json',
+      'v5.schema.json',
       ...readdirSync(join(contractRoot, 'fixtures')).map(
         (name) => `fixtures/${name}`,
       ),

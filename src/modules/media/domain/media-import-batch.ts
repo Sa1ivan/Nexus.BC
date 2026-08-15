@@ -4,5 +4,7 @@ export interface MediaImportBatch {
   readonly attachedProjectId: string | null;
   readonly expiresAt: Date;
   readonly attachedAt: Date | null;
+  readonly cleanupStartedAt: Date | null;
+  readonly cleanupLastAttemptAt: Date | null;
   readonly createdAt: Date;
 }

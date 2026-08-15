@@ -119,9 +119,9 @@
           "buttonText": "Начать",
           "buttonHref": "#lead-form",
           "media": {
-            "assetId": "asset-managed-1",
-            "src": "images/../unsafe.webp",
-            "alt": "Managed media"
+            "kind": "bundled",
+            "path": "images/../unsafe.webp",
+            "alt": "Unsafe bundled media"
           },
           "styles": {
             "backgroundColor": "#f5f7fb",

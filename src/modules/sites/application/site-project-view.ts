@@ -80,6 +80,13 @@ function requiredPositiveInteger(value: unknown, field: string): number {
   return Number(value);
 }
 
+function requiredSchemaVersion(value: unknown): 4 | 5 {
+  if (value !== 4 && value !== 5) {
+    throw new Error('Stored idempotency schema version is invalid');
+  }
+  return value;
+}
+
 export async function replayEditorProject(
   record: StoredIdempotencyRecord,
   repository: SiteRepository,
@@ -94,8 +101,8 @@ export async function replayEditorProject(
     body.draftVersion,
     'draft version',
   );
+  const schemaVersion = requiredSchemaVersion(body.schemaVersion);
   if (
-    body.schemaVersion !== 4 ||
     storedWorkspaceId !== workspaceId ||
     (expectedProjectId !== undefined && projectId !== expectedProjectId)
   ) {
@@ -111,7 +118,11 @@ export async function replayEditorProject(
     throw new Error('Stored idempotency project snapshot is unavailable');
   }
   const dto = editorProjectDto(project, configuration, revision);
-  if (body.publicSlug !== dto.publicSlug || body.publicUrl !== dto.publicUrl) {
+  if (
+    schemaVersion !== dto.draftSchemaVersion ||
+    body.publicSlug !== dto.publicSlug ||
+    body.publicUrl !== dto.publicUrl
+  ) {
     throw new Error('Stored idempotency public identity is invalid');
   }
   return dto;

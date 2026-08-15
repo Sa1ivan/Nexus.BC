@@ -11,6 +11,7 @@ import request from 'supertest';
 import type { App } from 'supertest/types';
 import ts from 'typescript';
 import { AppModule } from '../../src/app.module';
+import { APP_CONFIG } from '../../src/shared/config/app-config.schema';
 import type { PrismaClient } from '../../src/generated/prisma/client';
 import { CompleteMediaUpload } from '../../src/modules/media/application/complete-media-upload';
 import {
@@ -20,6 +21,7 @@ import {
   type BoundedObjectReadResult,
   type ObjectStorage,
   type ObjectStorageKey,
+  type PresignedPutInput,
 } from '../../src/modules/media/application/ports/object-storage';
 import {
   MEDIA_INSPECTOR,
@@ -32,6 +34,10 @@ import { SharpMediaInspector } from '../../src/modules/media/infrastructure/shar
 import type { AuditWriter } from '../../src/shared/audit/audit-writer';
 import { PrismaClientService } from '../../src/shared/database/prisma.service';
 import { TransactionRunner } from '../../src/shared/database/transaction-runner';
+import {
+  createV5TestDatabase,
+  type V5TestDatabase,
+} from './support/v5-test-database';
 
 const allowedOrigin = 'http://localhost:4200';
 const accessTokenSecret = 'test-access-token-secret-32-bytes';
@@ -68,10 +74,27 @@ interface DiscoveredCleanup {
 class MemoryObjectStorage implements ObjectStorage {
   readonly objects = new Map<ObjectStorageKey, Uint8Array>();
   readonly oversized = new Set<ObjectStorageKey>();
+  readonly failedDeletes = new Set<ObjectStorageKey>();
+  readonly deletes: ObjectStorageKey[] = [];
   reads = 0;
 
-  createPresignedPut(): Promise<never> {
-    return Promise.reject(new Error('not used'));
+  createPresignedPut(input: PresignedPutInput) {
+    return Promise.resolve({
+      url: `https://storage.example.test/${input.key}`,
+      method: 'PUT' as const,
+      requiredHeaders: Object.freeze({
+        'content-type': input.contentType,
+        'if-none-match': '*' as const,
+      }),
+      expiresAt: new Date(Date.now() + input.expiresInSeconds * 1_000),
+    });
+  }
+
+  createPresignedGet(input: { readonly key: ObjectStorageKey }) {
+    return Promise.resolve({
+      url: `https://storage.example.test/${input.key}?signature=test`,
+      expiresAt: new Date(Date.now() + 10 * 60 * 1_000),
+    });
   }
 
   head(key: ObjectStorageKey) {
@@ -116,6 +139,10 @@ class MemoryObjectStorage implements ObjectStorage {
   }
 
   delete(key: ObjectStorageKey): Promise<void> {
+    this.deletes.push(key);
+    if (this.failedDeletes.has(key)) {
+      return Promise.reject(new Error('Controlled object deletion failure'));
+    }
     this.objects.delete(key);
     return Promise.resolve();
   }
@@ -265,16 +292,19 @@ describe('managed media readiness and publish', () => {
   let repository: PrismaMediaRepository;
   let storage: MemoryObjectStorage;
   let transactions: TransactionRunner;
+  let testDatabase: V5TestDatabase;
   let alternatePng: Buffer;
   const userIds: string[] = [];
   const workspaceIds: string[] = [];
 
   beforeAll(async () => {
+    testDatabase = await createV5TestDatabase('nexus_media');
     storage = new MemoryObjectStorage();
     publishInspector = new MutableMediaInspector(new SharpMediaInspector());
     const builder = Test.createTestingModule({
       imports: [AppModule],
     });
+    builder.overrideProvider(APP_CONFIG).useValue(testDatabase.configuration);
     builder.overrideProvider(OBJECT_STORAGE).useValue(storage);
     builder.overrideProvider(MEDIA_INSPECTOR).useValue(publishInspector);
     const moduleFixture = await builder.compile();
@@ -338,10 +368,13 @@ describe('managed media readiness and publish', () => {
     workspaceIds.length = 0;
     storage.objects.clear();
     storage.oversized.clear();
+    storage.failedDeletes.clear();
+    storage.deletes.length = 0;
   });
 
   afterAll(async () => {
     await app.close();
+    await testDatabase.dispose();
   });
 
   async function seedIdentity(label: string): Promise<TestIdentity> {
@@ -667,12 +700,15 @@ describe('managed media readiness and publish', () => {
         }
       }
     }
+    const cleanupCandidates = candidates.filter(({ className }) =>
+      className.includes('Cleanup'),
+    );
     expect(
-      candidates.map(
+      cleanupCandidates.map(
         ({ className, methodName }) => `${className}.${methodName}`,
       ),
     ).toHaveLength(1);
-    const candidate = candidates[0];
+    const candidate = cleanupCandidates[0];
     if (candidate === undefined) {
       throw new Error('Expired unattached media cleanup provider is missing');
     }
@@ -834,7 +870,7 @@ describe('managed media readiness and publish', () => {
       'invalid-image',
     ],
   ] as const)(
-    'rejects %s without persisting verification',
+    'rejects %s, removes the untrusted object, and retains a cleanup record',
     async (_case, bytes, checksum, code) => {
       const identity = await seedIdentity('completion-integrity');
       const asset = await seedProjectAsset(identity, {
@@ -856,7 +892,8 @@ describe('managed media readiness and publish', () => {
       ).resolves.toEqual({ kind: 'rejected', code });
       await expect(
         prisma.mediaAsset.findUniqueOrThrow({ where: { id: asset.assetId } }),
-      ).resolves.toMatchObject({ status: 'PENDING', verifiedAt: null });
+      ).resolves.toMatchObject({ status: 'PENDING' });
+      expect(storage.objects.has(asset.key)).toBe(false);
     },
   );
 
@@ -875,6 +912,9 @@ describe('managed media readiness and publish', () => {
         requestId: randomUUID(),
       }),
     ).resolves.toEqual({ kind: 'rejected', code: 'media-too-large' });
+    await expect(
+      prisma.mediaAsset.findUniqueOrThrow({ where: { id: asset.assetId } }),
+    ).resolves.toMatchObject({ status: 'PENDING' });
   });
 
   it('rejects an expired unattached pending import before object access', async () => {
@@ -924,8 +964,24 @@ describe('managed media readiness and publish', () => {
     expect(storage.reads).toBe(0);
   });
 
-  it('removes expired unattached batch rows and objects while preserving live or attached batches', async () => {
+  it('reconciles expired objects behind durable tombstones while preserving live or attached batches', async () => {
     const identity = await seedIdentity('cleanup-batches');
+    const staleProjectUpload = await seedProjectAsset(identity, {
+      status: 'PENDING',
+    });
+    const liveProjectUpload = await seedProjectAsset(identity, {
+      status: 'PENDING',
+    });
+    const deletingProjectAsset = await seedProjectAsset(identity, {
+      status: 'DELETING',
+    });
+    storage.objects.set(staleProjectUpload.key, png);
+    storage.objects.set(liveProjectUpload.key, png);
+    storage.objects.set(deletingProjectAsset.key, png);
+    await prisma.mediaAsset.update({
+      where: { id: staleProjectUpload.assetId },
+      data: { createdAt: new Date(Date.now() - 25 * 60 * 60 * 1_000) },
+    });
     const expired = await seedCleanupBatch({
       identity,
       expired: true,
@@ -962,15 +1018,37 @@ describe('managed media readiness and publish', () => {
 
     await cleanup.invoke(new Date());
 
-    for (const removed of [expired, expiredReady]) {
+    for (const reconciled of [expired, expiredReady]) {
       await expect(
-        prisma.mediaAsset.findUnique({ where: { id: removed.assetId } }),
-      ).resolves.toBeNull();
-      await expect(
-        prisma.mediaImportBatch.findUnique({ where: { id: removed.batchId } }),
-      ).resolves.toBeNull();
-      expect(storage.objects.has(removed.key)).toBe(false);
+        prisma.mediaAsset.findUniqueOrThrow({
+          where: { id: reconciled.assetId },
+        }),
+      ).resolves.toMatchObject({ importBatchId: reconciled.batchId });
+      const tombstone = await prisma.mediaImportBatch.findUniqueOrThrow({
+        where: { id: reconciled.batchId },
+      });
+      expect(tombstone.cleanupStartedAt).toBeInstanceOf(Date);
+      expect(tombstone.cleanupLastAttemptAt).toBeInstanceOf(Date);
+      expect(storage.objects.has(reconciled.key)).toBe(false);
     }
+    const staleTombstone = await prisma.mediaAsset.findUniqueOrThrow({
+      where: { id: staleProjectUpload.assetId },
+    });
+    expect(staleTombstone.cleanupStartedAt).toBeInstanceOf(Date);
+    expect(staleTombstone.cleanupLastAttemptAt).toBeInstanceOf(Date);
+    expect(storage.objects.has(staleProjectUpload.key)).toBe(false);
+    const deletingTombstone = await prisma.mediaAsset.findUniqueOrThrow({
+      where: { id: deletingProjectAsset.assetId },
+    });
+    expect(deletingTombstone.cleanupStartedAt).toBeInstanceOf(Date);
+    expect(deletingTombstone.cleanupLastAttemptAt).toBeInstanceOf(Date);
+    expect(storage.objects.has(deletingProjectAsset.key)).toBe(false);
+    await expect(
+      prisma.mediaAsset.findUniqueOrThrow({
+        where: { id: liveProjectUpload.assetId },
+      }),
+    ).resolves.toMatchObject({ status: 'PENDING' });
+    expect(storage.objects.get(liveProjectUpload.key)).toEqual(png);
     expect(storage.objects.get(live.key)).toEqual(png);
     expect(storage.objects.get(attached.key)).toEqual(png);
     for (const { asset, batch, control } of controlRows) {
@@ -985,6 +1063,281 @@ describe('managed media readiness and publish', () => {
         }),
       ).resolves.toEqual(batch);
     }
+  });
+
+  it('reconciles a PUT that finishes after the first expired-batch DELETE', async () => {
+    const identity = await seedIdentity('import-upload-late-finish');
+    const batchId = randomUUID();
+    const expiresAt = new Date(Date.now() + 60_000);
+    await prisma.mediaImportBatch.create({
+      data: {
+        id: batchId,
+        workspaceId: identity.workspaceId,
+        createdAt: new Date(expiresAt.getTime() - 24 * 60 * 60 * 1_000),
+        expiresAt,
+      },
+    });
+
+    const upload = await request(app.getHttpServer())
+      .post(
+        `/v1/workspaces/${identity.workspaceId}/media/import-batches/${batchId}/uploads`,
+      )
+      .set('Authorization', `Bearer ${identity.accessToken}`)
+      .set('Origin', allowedOrigin)
+      .send({
+        fileName: 'settled.png',
+        mimeType: 'image/png',
+        sizeBytes: png.byteLength,
+        checksumSha256: pngChecksum,
+      })
+      .expect(201);
+    const uploadBody: unknown = upload.body;
+    if (!isRecord(uploadBody) || !isRecord(uploadBody['upload'])) {
+      throw new Error('Import upload response is invalid');
+    }
+    const assetId = String(uploadBody['assetId']);
+    const asset = await prisma.mediaAsset.findUniqueOrThrow({
+      where: { id: assetId },
+    });
+    const cleanup = discoverCleanupUseCase();
+    const firstAttemptAt = new Date(expiresAt.getTime() + 1);
+
+    await cleanup.invoke(firstAttemptAt);
+    expect(
+      storage.deletes.filter((key) => key === asset.objectKey),
+    ).toHaveLength(1);
+    const claimedBatch = await prisma.mediaImportBatch.findUniqueOrThrow({
+      where: { id: batchId },
+    });
+    expect(claimedBatch.cleanupStartedAt).toEqual(firstAttemptAt);
+    expect(claimedBatch.cleanupLastAttemptAt).toEqual(firstAttemptAt);
+
+    // Models a PUT authenticated before URL expiry but committed after the first DELETE.
+    storage.objects.set(asset.objectKey as ObjectStorageKey, png);
+    const newExpiry = new Date(firstAttemptAt.getTime() + 30 * 60 * 1_000);
+    await prisma.mediaImportBatch.createMany({
+      data: Array.from({ length: 100 }, () => ({
+        id: randomUUID(),
+        workspaceId: identity.workspaceId,
+        createdAt: new Date(newExpiry.getTime() - 24 * 60 * 60 * 1_000),
+        expiresAt: newExpiry,
+      })),
+    });
+    const secondAttemptAt = new Date(
+      firstAttemptAt.getTime() + 60 * 60 * 1_000,
+    );
+    await cleanup.invoke(secondAttemptAt);
+
+    expect(storage.objects.has(asset.objectKey as ObjectStorageKey)).toBe(
+      false,
+    );
+    expect(
+      storage.deletes.filter((key) => key === asset.objectKey),
+    ).toHaveLength(2);
+    await expect(
+      prisma.mediaAsset.findUniqueOrThrow({ where: { id: assetId } }),
+    ).resolves.toMatchObject({ importBatchId: batchId });
+    const reconciledBatch = await prisma.mediaImportBatch.findUniqueOrThrow({
+      where: { id: batchId },
+    });
+    expect(reconciledBatch.cleanupStartedAt).toEqual(firstAttemptAt);
+    expect(reconciledBatch.cleanupLastAttemptAt).toEqual(secondAttemptAt);
+  });
+
+  it('persists an expired-batch cleanup claim and resumes after storage recovers', async () => {
+    const identity = await seedIdentity('cleanup-batch-retry');
+    const expired = await seedCleanupBatch({
+      identity,
+      expired: true,
+      attached: false,
+      status: 'READY',
+    });
+    storage.failedDeletes.add(expired.key);
+    const cleanup = discoverCleanupUseCase();
+
+    await expect(cleanup.invoke(new Date())).rejects.toThrow(
+      'Media cleanup failed for 1 object(s)',
+    );
+    const claimedBatch = await prisma.mediaImportBatch.findUniqueOrThrow({
+      where: { id: expired.batchId },
+    });
+    expect(claimedBatch.cleanupStartedAt).toBeInstanceOf(Date);
+
+    const claimedReplay = await request(app.getHttpServer())
+      .post(
+        `/v1/workspaces/${identity.workspaceId}/media/import-batches/${expired.batchId}/media/${expired.assetId}/complete`,
+      )
+      .set('Authorization', `Bearer ${identity.accessToken}`)
+      .set('Origin', allowedOrigin)
+      .expect(409);
+    expect(errorCode(claimedReplay)).toBe('MEDIA_ASSET_NOT_READY');
+
+    storage.failedDeletes.delete(expired.key);
+    const recoveredAt = new Date(Date.now() + 60 * 60 * 1_000);
+    await cleanup.invoke(recoveredAt);
+
+    await expect(
+      prisma.mediaAsset.findUniqueOrThrow({ where: { id: expired.assetId } }),
+    ).resolves.toMatchObject({ importBatchId: expired.batchId });
+    const reconciledBatch = await prisma.mediaImportBatch.findUniqueOrThrow({
+      where: { id: expired.batchId },
+    });
+    expect(reconciledBatch.cleanupStartedAt).toEqual(
+      claimedBatch.cleanupStartedAt,
+    );
+    expect(reconciledBatch.cleanupLastAttemptAt).toEqual(recoveredAt);
+    expect(storage.objects.has(expired.key)).toBe(false);
+  });
+
+  it('continues batch and project reconciliation after a poison object fails', async () => {
+    const identity = await seedIdentity('cleanup-poison-isolation');
+    const batchId = randomUUID();
+    const expiresAt = new Date(Date.now() - 60_000);
+    await prisma.mediaImportBatch.create({
+      data: {
+        id: batchId,
+        workspaceId: identity.workspaceId,
+        createdAt: new Date(expiresAt.getTime() - 24 * 60 * 60 * 1_000),
+        expiresAt,
+      },
+    });
+    const poisonAssetId = '00000000-0000-4000-8000-000000000001';
+    const healthyAssetId = '00000000-0000-4000-8000-000000000002';
+    const poisonKey = buildImportMediaObjectKey({
+      workspaceId: identity.workspaceId,
+      batchId,
+      assetId: poisonAssetId,
+      safeName: 'poison.png',
+    });
+    const healthyKey = buildImportMediaObjectKey({
+      workspaceId: identity.workspaceId,
+      batchId,
+      assetId: healthyAssetId,
+      safeName: 'healthy.png',
+    });
+    for (const [id, objectKey, fileName] of [
+      [poisonAssetId, poisonKey, 'poison.png'],
+      [healthyAssetId, healthyKey, 'healthy.png'],
+    ] as const) {
+      await prisma.mediaAsset.create({
+        data: {
+          id,
+          workspaceId: identity.workspaceId,
+          importBatchId: batchId,
+          objectKey,
+          declaredFileName: fileName,
+          declaredMimeType: 'image/png',
+          declaredSizeBytes: png.byteLength,
+          declaredChecksumSha256: pngChecksum,
+        },
+      });
+      storage.objects.set(objectKey, png);
+    }
+    const staleProjectUpload = await seedProjectAsset(identity, {
+      status: 'PENDING',
+    });
+    await prisma.mediaAsset.update({
+      where: { id: staleProjectUpload.assetId },
+      data: { createdAt: new Date(Date.now() - 25 * 60 * 60 * 1_000) },
+    });
+    storage.objects.set(staleProjectUpload.key, png);
+    storage.failedDeletes.add(poisonKey);
+
+    await expect(discoverCleanupUseCase().invoke(new Date())).rejects.toThrow(
+      'Media cleanup failed for 1 object(s)',
+    );
+
+    expect(storage.deletes).toContain(poisonKey);
+    expect(storage.deletes).toContain(healthyKey);
+    expect(storage.deletes).toContain(staleProjectUpload.key);
+    expect(storage.objects.get(poisonKey)).toEqual(png);
+    expect(storage.objects.has(healthyKey)).toBe(false);
+    expect(storage.objects.has(staleProjectUpload.key)).toBe(false);
+    const healthyTombstone = await prisma.mediaAsset.findUniqueOrThrow({
+      where: { id: healthyAssetId },
+    });
+    const projectTombstone = await prisma.mediaAsset.findUniqueOrThrow({
+      where: { id: staleProjectUpload.assetId },
+    });
+    expect(healthyTombstone.cleanupLastAttemptAt).toBeInstanceOf(Date);
+    expect(projectTombstone.cleanupLastAttemptAt).toBeInstanceOf(Date);
+  });
+
+  it('bounds each cleanup run and reserves attempts for both object queues', async () => {
+    const identity = await seedIdentity('cleanup-global-budget');
+    const now = new Date();
+    const expiresAt = new Date(now.getTime() - 60_000);
+    const batchId = randomUUID();
+    await prisma.mediaImportBatch.create({
+      data: {
+        id: batchId,
+        workspaceId: identity.workspaceId,
+        createdAt: new Date(expiresAt.getTime() - 24 * 60 * 60 * 1_000),
+        expiresAt,
+      },
+    });
+    const importAssets = Array.from({ length: 40 }, (_, index) => {
+      const id = randomUUID();
+      return {
+        id,
+        key: buildImportMediaObjectKey({
+          workspaceId: identity.workspaceId,
+          batchId,
+          assetId: id,
+          safeName: `import-${String(index)}.png`,
+        }),
+      };
+    });
+    const projectAssets = Array.from({ length: 40 }, (_, index) => {
+      const id = randomUUID();
+      return {
+        id,
+        key: buildProjectMediaObjectKey({
+          workspaceId: identity.workspaceId,
+          projectId: identity.projectId,
+          assetId: id,
+          safeName: `project-${String(index)}.png`,
+        }),
+      };
+    });
+    await prisma.mediaAsset.createMany({
+      data: [
+        ...importAssets.map(({ id, key }) => ({
+          id,
+          workspaceId: identity.workspaceId,
+          importBatchId: batchId,
+          objectKey: key,
+          declaredFileName: 'import.png',
+          declaredMimeType: 'image/png',
+          declaredSizeBytes: png.byteLength,
+          declaredChecksumSha256: pngChecksum,
+        })),
+        ...projectAssets.map(({ id, key }) => ({
+          id,
+          workspaceId: identity.workspaceId,
+          projectId: identity.projectId,
+          objectKey: key,
+          declaredFileName: 'project.png',
+          declaredMimeType: 'image/png',
+          declaredSizeBytes: png.byteLength,
+          declaredChecksumSha256: pngChecksum,
+          createdAt: new Date(now.getTime() - 25 * 60 * 60 * 1_000),
+        })),
+      ],
+    });
+    for (const { key } of [...importAssets, ...projectAssets]) {
+      storage.objects.set(key, png);
+    }
+
+    await discoverCleanupUseCase().invoke(now);
+
+    expect(storage.deletes).toHaveLength(60);
+    expect(
+      importAssets.filter(({ key }) => !storage.objects.has(key)),
+    ).toHaveLength(30);
+    expect(
+      projectAssets.filter(({ key }) => !storage.objects.has(key)),
+    ).toHaveLength(30);
   });
 
   it('completes once and returns persisted evidence idempotently', async () => {
@@ -1016,6 +1369,193 @@ describe('managed media readiness and publish', () => {
     expect(storage.reads).toBe(1);
   });
 
+  it('creates, completes, and lists a project upload without exposing storage coordinates', async () => {
+    const identity = await seedIdentity('project-upload-api');
+    const upload = await request(app.getHttpServer())
+      .post(
+        `/v1/workspaces/${identity.workspaceId}/projects/${identity.projectId}/media/uploads`,
+      )
+      .set('Authorization', `Bearer ${identity.accessToken}`)
+      .set('Origin', allowedOrigin)
+      .send({
+        fileName: 'hero.png',
+        mimeType: 'image/png',
+        sizeBytes: png.byteLength,
+        checksumSha256: pngChecksum,
+      })
+      .expect(201);
+    expect(upload.body).toMatchObject({
+      status: 'PENDING',
+      upload: {
+        method: 'PUT',
+        requiredHeaders: {
+          'content-type': 'image/png',
+          'if-none-match': '*',
+        },
+      },
+    });
+    const uploadBody: unknown = upload.body;
+    if (!isRecord(uploadBody)) throw new Error('Upload response is invalid');
+    const assetId: unknown = uploadBody['assetId'];
+    expect(typeof assetId).toBe('string');
+    const asset = await prisma.mediaAsset.findUniqueOrThrow({
+      where: { id: String(assetId) },
+    });
+    storage.objects.set(asset.objectKey as ObjectStorageKey, png);
+
+    await request(app.getHttpServer())
+      .post(
+        `/v1/workspaces/${identity.workspaceId}/projects/${identity.projectId}/media/${String(assetId)}/complete`,
+      )
+      .set('Authorization', `Bearer ${identity.accessToken}`)
+      .set('Origin', allowedOrigin)
+      .expect(200)
+      .expect(({ body }) => {
+        expect(body).toMatchObject({
+          assetId,
+          status: 'READY',
+          mimeType: 'image/png',
+          sizeBytes: png.byteLength,
+          width: 1,
+          height: 1,
+        });
+      });
+
+    const listed = await request(app.getHttpServer())
+      .get(
+        `/v1/workspaces/${identity.workspaceId}/projects/${identity.projectId}/media`,
+      )
+      .set('Authorization', `Bearer ${identity.accessToken}`)
+      .expect(200);
+    const listedBody: unknown = listed.body;
+    if (!isRecord(listedBody) || !Array.isArray(listedBody['items'])) {
+      throw new Error('Media list response is invalid');
+    }
+    expect(listedBody['items']).toEqual([
+      expect.objectContaining({ assetId, status: 'READY' }),
+    ]);
+    expect(JSON.stringify(listed.body)).not.toContain(asset.objectKey);
+    expect(listedBody['items'][0]).not.toHaveProperty('checksumSha256');
+  });
+
+  it('creates and completes an unattached import-batch upload', async () => {
+    const identity = await seedIdentity('import-upload-api');
+    const batch = await request(app.getHttpServer())
+      .post(`/v1/workspaces/${identity.workspaceId}/media/import-batches`)
+      .set('Authorization', `Bearer ${identity.accessToken}`)
+      .set('Origin', allowedOrigin)
+      .expect(201);
+    const batchBody: unknown = batch.body;
+    if (!isRecord(batchBody)) throw new Error('Batch response is invalid');
+    const batchId: unknown = batchBody['batchId'];
+    expect(typeof batchId).toBe('string');
+
+    const upload = await request(app.getHttpServer())
+      .post(
+        `/v1/workspaces/${identity.workspaceId}/media/import-batches/${String(batchId)}/uploads`,
+      )
+      .set('Authorization', `Bearer ${identity.accessToken}`)
+      .set('Origin', allowedOrigin)
+      .send({
+        fileName: 'legacy.png',
+        mimeType: 'image/png',
+        sizeBytes: png.byteLength,
+        checksumSha256: pngChecksum,
+      })
+      .expect(201);
+    const uploadBody: unknown = upload.body;
+    if (!isRecord(uploadBody)) throw new Error('Upload response is invalid');
+    const assetId: unknown = uploadBody['assetId'];
+    expect(typeof assetId).toBe('string');
+    const asset = await prisma.mediaAsset.findUniqueOrThrow({
+      where: { id: String(assetId) },
+    });
+    expect(asset.projectId).toBeNull();
+    expect(asset.importBatchId).toBe(batchId);
+    storage.objects.set(asset.objectKey as ObjectStorageKey, png);
+
+    await request(app.getHttpServer())
+      .post(
+        `/v1/workspaces/${identity.workspaceId}/media/import-batches/${String(batchId)}/media/${String(assetId)}/complete`,
+      )
+      .set('Authorization', `Bearer ${identity.accessToken}`)
+      .set('Origin', allowedOrigin)
+      .expect(200)
+      .expect(({ body }) => {
+        expect(body).toMatchObject({ assetId, status: 'READY' });
+      });
+
+    const created = await request(app.getHttpServer())
+      .post(`/v1/workspaces/${identity.workspaceId}/projects`)
+      .set('Authorization', `Bearer ${identity.accessToken}`)
+      .set('Origin', allowedOrigin)
+      .set('Idempotency-Key', randomUUID())
+      .send({
+        name: 'Imported media project',
+        siteConfig: managedConfig(String(assetId)),
+        mediaImportBatchId: batchId,
+      })
+      .expect(201);
+    const createdBody: unknown = created.body;
+    if (!isRecord(createdBody)) {
+      throw new Error('Create project response is invalid');
+    }
+    const projectId: unknown = createdBody['id'];
+    const publicSlug: unknown = createdBody['publicSlug'];
+    expect(typeof projectId).toBe('string');
+    expect(typeof publicSlug).toBe('string');
+    await expect(
+      prisma.mediaAsset.findUniqueOrThrow({ where: { id: String(assetId) } }),
+    ).resolves.toMatchObject({ projectId });
+    const attachedBatch = await prisma.mediaImportBatch.findUniqueOrThrow({
+      where: { id: String(batchId) },
+    });
+    expect(attachedBatch).toMatchObject({ attachedProjectId: projectId });
+    expect(attachedBatch.attachedAt).toBeInstanceOf(Date);
+
+    for (const completeUrl of [
+      `/v1/workspaces/${identity.workspaceId}/projects/${String(projectId)}/media/${String(assetId)}/complete`,
+      `/v1/workspaces/${identity.workspaceId}/media/import-batches/${String(batchId)}/media/${String(assetId)}/complete`,
+    ]) {
+      await request(app.getHttpServer())
+        .post(completeUrl)
+        .set('Authorization', `Bearer ${identity.accessToken}`)
+        .set('Origin', allowedOrigin)
+        .expect(200)
+        .expect(({ body }) => {
+          expect(body).toMatchObject({ assetId, status: 'READY' });
+        });
+    }
+
+    await request(app.getHttpServer())
+      .post(
+        `/v1/workspaces/${identity.workspaceId}/projects/${String(projectId)}/publish`,
+      )
+      .set('Authorization', `Bearer ${identity.accessToken}`)
+      .set('Origin', allowedOrigin)
+      .set('Idempotency-Key', randomUUID())
+      .send({
+        expectedDraftVersion: 1,
+        siteConfig: managedConfig(String(assetId)),
+      })
+      .expect(200);
+
+    await expect(
+      prisma.release.count({ where: { projectId: String(projectId) } }),
+    ).resolves.toBe(1);
+
+    const publicSite = await request(app.getHttpServer())
+      .get(`/v1/public/sites/${String(publicSlug)}`)
+      .expect(200);
+    const serializedPublicSite = JSON.stringify(publicSite.body);
+    expect(serializedPublicSite).toContain(
+      `https://storage.example.test/workspaces/${identity.workspaceId}/imports/${String(batchId)}/${String(assetId)}/legacy.png?signature=test`,
+    );
+    expect(serializedPublicSite).not.toContain('"assetId"');
+    expect(serializedPublicSite).not.toContain('"kind":"managed"');
+    expect(serializedPublicSite).not.toContain('"objectKey"');
+  });
+
   it('publishes and atomically activates v5 only when every managed asset is ready and intact', async () => {
     const identity = await seedIdentity('publish-ready');
     const asset = await seedProjectAsset(identity);
@@ -1028,6 +1568,22 @@ describe('managed media readiness and publish', () => {
       active: 1,
       releases: 1,
       revisions: 2,
+    });
+  });
+
+  it('returns the stable not-ready conflict for a schema-valid non-UUID asset id', async () => {
+    const identity = await seedIdentity('publish-non-uuid');
+
+    const response = await publish(identity, 'asset-managed-1');
+
+    expect(response.status).toBe(409);
+    expect(response.body).toMatchObject({
+      error: { code: 'MEDIA_ASSET_NOT_READY' },
+    });
+    await expect(releaseState(identity)).resolves.toEqual({
+      active: 0,
+      releases: 0,
+      revisions: 1,
     });
   });
 

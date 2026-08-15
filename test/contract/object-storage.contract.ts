@@ -5,6 +5,7 @@ import { Readable } from 'node:stream';
 import {
   OBJECT_STORAGE,
   OBJECT_STORAGE_CREATE_ONLY_WRITE_CONDITION,
+  OBJECT_STORAGE_PRESIGNED_GET_TTL_SECONDS,
   OBJECT_STORAGE_PRESIGNED_PUT_TTL_SECONDS,
   buildImportMediaObjectKey,
   buildProjectMediaObjectKey,
@@ -100,6 +101,11 @@ describe('object storage application port contract', () => {
           }),
           expiresAt: new Date('2026-08-11T12:05:00.000Z'),
         }),
+      createPresignedGet: () =>
+        Promise.resolve({
+          url: 'https://storage.example.test/signed-read',
+          expiresAt: new Date('2026-08-11T12:10:00.000Z'),
+        }),
       head: () =>
         Promise.resolve({
           kind: 'found' as const,
@@ -127,6 +133,10 @@ describe('object storage application port contract', () => {
       expiresInSeconds: OBJECT_STORAGE_PRESIGNED_PUT_TTL_SECONDS,
       writeCondition: OBJECT_STORAGE_CREATE_ONLY_WRITE_CONDITION,
     });
+    const presignedRead = await storage.createPresignedGet({
+      key,
+      expiresInSeconds: OBJECT_STORAGE_PRESIGNED_GET_TTL_SECONDS,
+    });
     const head = await storage.head(key);
     const read = await storage.readBounded({ key, maxBytes: 10 });
     await storage.delete(key);
@@ -138,6 +148,7 @@ describe('object storage application port contract', () => {
     expect(OBJECT_STORAGE_PRESIGNED_PUT_TTL_SECONDS).toBe(300);
     expect(Object.keys(storage)).toEqual([
       'createPresignedPut',
+      'createPresignedGet',
       'head',
       'readBounded',
       'delete',
@@ -150,6 +161,10 @@ describe('object storage application port contract', () => {
         'if-none-match': '*',
       },
       expiresAt: new Date('2026-08-11T12:05:00.000Z'),
+    });
+    expect(presignedRead).toEqual({
+      url: 'https://storage.example.test/signed-read',
+      expiresAt: new Date('2026-08-11T12:10:00.000Z'),
     });
     expect(head).toEqual({
       kind: 'found',

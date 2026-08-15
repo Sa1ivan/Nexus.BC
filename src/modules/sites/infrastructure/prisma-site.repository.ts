@@ -1,5 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { PrismaClientService } from '../../../shared/database/prisma.service';
+import type { SiteConfigSchemaVersion } from '../../../shared/config/site-config-rollout';
 import type { TransactionContext } from '../../../shared/database/transaction-runner';
 import {
   PrismaTransactionClientService,
@@ -11,6 +12,7 @@ import type {
   CreateProjectRecord,
   CursorInput,
   CursorPage,
+  FindReleaseForActivationRecord,
   ProjectSummary,
   PublicReleaseSnapshot,
   PublishProjectRecord,
@@ -19,6 +21,11 @@ import type {
   SaveDraftResult,
   SiteRepository,
 } from '../application/sites.ports';
+import { managedMediaAssetIds } from '../application/managed-media-references';
+import type {
+  RetainedMediaReferenceInput,
+  SitesRetainedMediaReference,
+} from '../application/public';
 import { InvalidSiteCursorError } from '../application/sites-errors';
 import type { Project } from '../domain/project';
 import type { ProjectRevision } from '../domain/project-revision';
@@ -27,6 +34,8 @@ import {
   type SiteConfigDocument,
   validateAndCanonicalizeSiteConfigV4Json,
 } from '../domain/site-config-v4';
+import { validateAndCanonicalizeSiteConfigV5Json } from '../domain/site-config-v5';
+import { SiteConfigRolloutGuard } from './site-config-rollout-guard';
 
 interface ProjectRow {
   readonly id: string;
@@ -83,6 +92,8 @@ interface PublicReleaseRow {
 }
 
 interface PublicReleaseProjectRow {
+  readonly id: string;
+  readonly workspaceId: string;
   readonly activeRelease: {
     readonly release: PublicReleaseRow;
   } | null;
@@ -116,6 +127,10 @@ interface SitePrismaClient {
 }
 
 interface SiteTransactionClient extends SitePrismaClient {
+  $queryRaw<T>(
+    query: TemplateStringsArray,
+    ...values: readonly unknown[]
+  ): Promise<T>;
   readonly project: SitePrismaClient['project'] & {
     create(arguments_: Readonly<Record<string, unknown>>): Promise<ProjectRow>;
     updateMany(
@@ -156,41 +171,48 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
-function siteConfigDocument(value: unknown): SiteConfigDocument {
-  if (!isRecord(value)) throw new Error('Stored SiteConfig must be an object');
-  return value;
-}
-
-function storedReleaseSiteConfig(value: unknown): SiteConfigDocument {
+function storedSiteConfig(
+  value: unknown,
+  version: SiteConfigSchemaVersion,
+  owner: string,
+): SiteConfigDocument {
+  const invalidMessage =
+    owner === 'release'
+      ? `Stored release SiteConfig v${version} snapshot is invalid`
+      : `Stored ${owner} SiteConfig v${version} is invalid`;
   let serialized: string;
   try {
     const candidate = JSON.stringify(value);
     if (candidate === undefined) throw new Error('not JSON');
     serialized = candidate;
   } catch {
-    throw new Error('Stored release SiteConfig v4 snapshot is invalid');
+    throw new Error(invalidMessage);
   }
-  const validated = validateAndCanonicalizeSiteConfigV4Json(serialized);
+  const validated =
+    version === 4
+      ? validateAndCanonicalizeSiteConfigV4Json(serialized)
+      : validateAndCanonicalizeSiteConfigV5Json(serialized);
   if (!validated.ok) {
-    throw new Error('Stored release SiteConfig v4 snapshot is invalid');
+    throw new Error(invalidMessage);
   }
   return validated.value;
 }
 
-function schemaVersion(value: number): 4 {
-  if (value !== 4)
-    throw new Error('Stored SiteConfig schema version must be 4');
+function schemaVersion(value: number): SiteConfigSchemaVersion {
+  if (value !== 4 && value !== 5)
+    throw new Error('Stored SiteConfig schema version must be 4 or 5');
   return value;
 }
 
 function storedProject(row: ProjectRow): Project {
+  const version = schemaVersion(row.draftSchemaVersion);
   return {
     id: row.id,
     workspaceId: row.workspaceId,
     name: row.name,
     publicSlug: row.publicSlug,
-    draft: siteConfigDocument(row.draft),
-    draftSchemaVersion: schemaVersion(row.draftSchemaVersion),
+    draft: storedSiteConfig(row.draft, version, 'project draft'),
+    draftSchemaVersion: version,
     draftVersion: row.draftVersion,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
@@ -198,35 +220,43 @@ function storedProject(row: ProjectRow): Project {
 }
 
 function storedRevision(row: RevisionRow): ProjectRevision {
+  const version = schemaVersion(row.schemaVersion);
   return {
     id: row.id,
     projectId: row.projectId,
     operationId: row.operationId,
     version: row.version,
-    siteConfig: siteConfigDocument(row.siteConfig),
-    schemaVersion: schemaVersion(row.schemaVersion),
+    siteConfig: storedSiteConfig(row.siteConfig, version, 'revision'),
+    schemaVersion: version,
     createdAt: row.createdAt,
   };
 }
 
 function storedRelease(row: ReleaseRow): Release {
+  const version = schemaVersion(row.schemaVersion);
   return {
     id: row.id,
     projectId: row.projectId,
     operationId: row.operationId,
     version: row.version,
-    siteConfig: storedReleaseSiteConfig(row.siteConfig),
-    schemaVersion: schemaVersion(row.schemaVersion),
+    siteConfig: storedSiteConfig(row.siteConfig, version, 'release'),
+    schemaVersion: version,
     publishedAt: row.publishedAt,
   };
 }
 
-function storedPublicRelease(row: PublicReleaseRow): PublicReleaseSnapshot {
+function storedPublicRelease(
+  row: PublicReleaseRow,
+  project: Pick<PublicReleaseProjectRow, 'id' | 'workspaceId'>,
+): PublicReleaseSnapshot {
+  const version = schemaVersion(row.schemaVersion);
   return {
     id: row.id,
+    workspaceId: project.workspaceId,
+    projectId: project.id,
     version: row.version,
-    siteConfig: siteConfigDocument(row.siteConfig),
-    schemaVersion: schemaVersion(row.schemaVersion),
+    siteConfig: storedSiteConfig(row.siteConfig, version, 'public release'),
+    schemaVersion: version,
   };
 }
 
@@ -323,11 +353,14 @@ function pagedResult<T, C>(
 }
 
 @Injectable()
-export class PrismaSiteRepository implements SiteRepository {
+export class PrismaSiteRepository
+  implements SiteRepository, SitesRetainedMediaReference
+{
   constructor(
     @Inject(PrismaClientService)
     private readonly prisma: SitePrismaClient,
     private readonly transactions: TransactionRunner,
+    private readonly rollout: SiteConfigRolloutGuard,
   ) {}
 
   async create(
@@ -335,6 +368,10 @@ export class PrismaSiteRepository implements SiteRepository {
     input: CreateProjectRecord,
   ): Promise<Project> {
     return this.withTransaction(context, async (transaction) => {
+      const siteConfig = await this.rollout.prepareWrite(
+        context,
+        input.siteConfig,
+      );
       const project = await transaction.project.create({
         data: {
           id: input.id,
@@ -342,8 +379,8 @@ export class PrismaSiteRepository implements SiteRepository {
           createOperationId: input.operationId,
           name: input.name,
           publicSlug: input.publicSlug,
-          draft: input.siteConfig,
-          draftSchemaVersion: 4,
+          draft: siteConfig.document,
+          draftSchemaVersion: siteConfig.schemaVersion,
           draftVersion: 1,
         },
       });
@@ -352,8 +389,8 @@ export class PrismaSiteRepository implements SiteRepository {
           projectId: input.id,
           operationId: input.operationId,
           version: 1,
-          siteConfig: input.siteConfig,
-          schemaVersion: 4,
+          siteConfig: siteConfig.document,
+          schemaVersion: siteConfig.schemaVersion,
         },
       });
       return storedProject(project);
@@ -402,6 +439,8 @@ export class PrismaSiteRepository implements SiteRepository {
     const project = await this.prisma.project.findUnique({
       where: { publicSlug },
       select: {
+        id: true,
+        workspaceId: true,
         activeRelease: {
           select: {
             release: {
@@ -417,7 +456,9 @@ export class PrismaSiteRepository implements SiteRepository {
       },
     });
     const release = project?.activeRelease?.release;
-    return release === undefined ? null : storedPublicRelease(release);
+    return project === null || release === undefined
+      ? null
+      : storedPublicRelease(release, project);
   }
 
   async saveDraft(
@@ -425,6 +466,10 @@ export class PrismaSiteRepository implements SiteRepository {
     input: SaveDraftRecord,
   ): Promise<SaveDraftResult> {
     return this.withTransaction(context, async (transaction) => {
+      const siteConfig = await this.rollout.prepareWrite(
+        context,
+        input.siteConfig,
+      );
       const repeatedOperation = await transaction.projectRevision.findFirst({
         where: {
           projectId: input.projectId,
@@ -442,8 +487,8 @@ export class PrismaSiteRepository implements SiteRepository {
           draftVersion: input.expectedDraftVersion,
         },
         data: {
-          draft: input.siteConfig,
-          draftSchemaVersion: 4,
+          draft: siteConfig.document,
+          draftSchemaVersion: siteConfig.schemaVersion,
           draftVersion: { increment: 1 },
         },
       });
@@ -465,8 +510,8 @@ export class PrismaSiteRepository implements SiteRepository {
           projectId: input.projectId,
           operationId: input.operationId,
           version,
-          siteConfig: input.siteConfig,
-          schemaVersion: 4,
+          siteConfig: siteConfig.document,
+          schemaVersion: siteConfig.schemaVersion,
         },
       });
       const project = await transaction.project.findFirst({
@@ -484,6 +529,10 @@ export class PrismaSiteRepository implements SiteRepository {
     input: PublishProjectRecord,
   ): Promise<PublishProjectResult> {
     return this.withTransaction(context, async (transaction) => {
+      const siteConfig = await this.rollout.prepareWrite(
+        context,
+        input.siteConfig,
+      );
       const repeatedOperation = await transaction.release.findFirst({
         where: {
           projectId: input.projectId,
@@ -500,8 +549,8 @@ export class PrismaSiteRepository implements SiteRepository {
           draftVersion: input.expectedDraftVersion,
         },
         data: {
-          draft: input.siteConfig,
-          draftSchemaVersion: 4,
+          draft: siteConfig.document,
+          draftSchemaVersion: siteConfig.schemaVersion,
           draftVersion: { increment: 1 },
         },
       });
@@ -523,8 +572,8 @@ export class PrismaSiteRepository implements SiteRepository {
           projectId: input.projectId,
           operationId: input.operationId,
           version,
-          siteConfig: input.siteConfig,
-          schemaVersion: 4,
+          siteConfig: siteConfig.document,
+          schemaVersion: siteConfig.schemaVersion,
         },
       });
       const release = await transaction.release.create({
@@ -532,8 +581,8 @@ export class PrismaSiteRepository implements SiteRepository {
           projectId: input.projectId,
           operationId: input.operationId,
           version,
-          siteConfig: input.siteConfig,
-          schemaVersion: 4,
+          siteConfig: siteConfig.document,
+          schemaVersion: siteConfig.schemaVersion,
         },
       });
       await transaction.activeRelease.upsert({
@@ -577,6 +626,53 @@ export class PrismaSiteRepository implements SiteRepository {
         },
       });
       return { kind: 'activated', release: stored };
+    });
+  }
+
+  async findReleaseForActivation(
+    context: TransactionContext,
+    input: FindReleaseForActivationRecord,
+  ): Promise<Release | null> {
+    return this.withTransaction(context, async (transaction) => {
+      const release = await transaction.release.findFirst({
+        where: {
+          id: input.releaseId,
+          projectId: input.projectId,
+          project: { workspaceId: input.workspaceId },
+        },
+      });
+      return release === null ? null : storedRelease(release);
+    });
+  }
+
+  async hasRetainedReference(
+    context: TransactionContext,
+    input: RetainedMediaReferenceInput,
+  ): Promise<boolean> {
+    return this.withTransaction(context, async (transaction) => {
+      const rows = await transaction.$queryRaw<
+        readonly { readonly siteConfig: unknown }[]
+      >`
+        SELECT "draft" AS "siteConfig"
+        FROM "Project"
+        WHERE "id" = ${input.projectId}::uuid
+          AND "workspaceId" = ${input.workspaceId}::uuid
+        UNION ALL
+        SELECT revision."siteConfig"
+        FROM "ProjectRevision" revision
+        INNER JOIN "Project" project ON project."id" = revision."projectId"
+        WHERE project."id" = ${input.projectId}::uuid
+          AND project."workspaceId" = ${input.workspaceId}::uuid
+        UNION ALL
+        SELECT release."siteConfig"
+        FROM "Release" release
+        INNER JOIN "Project" project ON project."id" = release."projectId"
+        WHERE project."id" = ${input.projectId}::uuid
+          AND project."workspaceId" = ${input.workspaceId}::uuid
+      `;
+      return rows.some(({ siteConfig }) =>
+        managedMediaAssetIds(siteConfig).includes(input.assetId),
+      );
     });
   }
 

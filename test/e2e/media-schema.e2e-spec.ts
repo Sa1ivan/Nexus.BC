@@ -227,6 +227,18 @@ describe('managed media persistence schema', () => {
         columnDefault: 'CURRENT_TIMESTAMP',
         isNullable: 'NO',
       },
+      {
+        columnName: 'cleanupStartedAt',
+        dataType: 'timestamp without time zone',
+        columnDefault: null,
+        isNullable: 'YES',
+      },
+      {
+        columnName: 'cleanupLastAttemptAt',
+        dataType: 'timestamp without time zone',
+        columnDefault: null,
+        isNullable: 'YES',
+      },
     ]);
 
     await expect(columns(client, 'MediaAsset')).resolves.toEqual([
@@ -344,6 +356,18 @@ describe('managed media persistence schema', () => {
         columnDefault: null,
         isNullable: 'NO',
       },
+      {
+        columnName: 'cleanupStartedAt',
+        dataType: 'timestamp without time zone',
+        columnDefault: null,
+        isNullable: 'YES',
+      },
+      {
+        columnName: 'cleanupLastAttemptAt',
+        dataType: 'timestamp without time zone',
+        columnDefault: null,
+        isNullable: 'YES',
+      },
     ]);
   });
 
@@ -363,6 +387,9 @@ describe('managed media persistence schema', () => {
     expect(batchConstraints).toMatch(
       /CHECK .+"expiresAt" = .+"createdAt".+24:00:00/u,
     );
+    expect(batchConstraints).toMatch(
+      /CHECK .+"cleanupStartedAt" IS NULL.+"attachedAt" IS NULL.+"attachedProjectId" IS NULL/u,
+    );
 
     const assetConstraints = (
       await constraintDefinitions(client, 'MediaAsset')
@@ -376,9 +403,23 @@ describe('managed media persistence schema', () => {
     expect(assetConstraints).toMatch(
       /FOREIGN KEY \("workspaceId"\) REFERENCES "Workspace"\(id\).+ON DELETE RESTRICT/u,
     );
+    expect(assetConstraints).toMatch(
+      /CHECK .+"cleanupStartedAt" IS NULL.+status.+PENDING.+DELETING/u,
+    );
 
-    expect(await indexDefinitions(client, 'MediaImportBatch')).toHaveLength(4);
-    expect(await indexDefinitions(client, 'MediaAsset')).toHaveLength(6);
+    const batchIndexes = await indexDefinitions(client, 'MediaImportBatch');
+    const assetIndexes = await indexDefinitions(client, 'MediaAsset');
+    expect(batchIndexes).toHaveLength(5);
+    expect(batchIndexes.join('\n')).toContain(
+      'MediaImportBatch_cleanup_due_idx',
+    );
+    expect(assetIndexes).toHaveLength(8);
+    expect(assetIndexes.join('\n')).toContain(
+      'MediaAsset_project_cleanup_due_idx',
+    );
+    expect(assetIndexes.join('\n')).toContain(
+      'MediaAsset_import_cleanup_due_idx',
+    );
     expect(await indexDefinitions(client, 'Project')).toHaveLength(5);
   });
 

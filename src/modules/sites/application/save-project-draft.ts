@@ -4,8 +4,14 @@ import {
   type AppConfig,
 } from '../../../shared/config/app-config.schema';
 import { IdempotencyCoordinator } from '../../../shared/idempotency/idempotency-coordinator';
+import {
+  MEDIA_MANAGED_REFERENCE_VALIDATION,
+  type MediaManagedReferenceValidation,
+} from '../../media/application/public';
+import { managedMediaAssetIds } from './managed-media-references';
 import type { EditorProjectDto } from './public';
 import { SiteAccessPolicy } from './site-access-policy';
+import { SitesProjectTransactionLock } from './sites-project-transaction-lock';
 import { editorProjectDto, replayEditorProject } from './site-project-view';
 import { SitesApplicationError } from './sites-errors';
 import { SITE_REPOSITORY, type SiteRepository } from './sites.ports';
@@ -14,10 +20,13 @@ import { requireCanonicalSiteConfig } from './validate-site-config';
 type SaveProjectOutcome =
   | { readonly kind: 'saved'; readonly project: EditorProjectDto }
   | { readonly kind: 'not-found' }
+  | { readonly kind: 'media-not-ready' }
   | {
       readonly kind: 'version-conflict';
       readonly currentDraftVersion: number;
     };
+
+export const SAVE_PROJECT_DRAFT = Symbol('SaveProjectDraft');
 
 @Injectable()
 export class SaveProjectDraft {
@@ -26,6 +35,9 @@ export class SaveProjectDraft {
     private readonly access: SiteAccessPolicy,
     private readonly idempotency: IdempotencyCoordinator,
     @Inject(APP_CONFIG) private readonly configuration: AppConfig,
+    private readonly projectLock: SitesProjectTransactionLock,
+    @Inject(MEDIA_MANAGED_REFERENCE_VALIDATION)
+    private readonly media: MediaManagedReferenceValidation,
   ) {}
 
   async execute(input: {
@@ -36,7 +48,10 @@ export class SaveProjectDraft {
     readonly expectedDraftVersion: number;
     readonly siteConfig: unknown;
   }): Promise<EditorProjectDto> {
-    const siteConfig = requireCanonicalSiteConfig(input.siteConfig);
+    const siteConfig = requireCanonicalSiteConfig(
+      input.siteConfig,
+      this.configuration.siteConfigRolloutMode,
+    );
     await this.access.requireMember(input.workspaceId, input.userId);
     const execution = await this.idempotency.execute<SaveProjectOutcome>({
       key: {
@@ -49,10 +64,29 @@ export class SaveProjectDraft {
         workspaceId: input.workspaceId,
         projectId: input.projectId,
         expectedDraftVersion: input.expectedDraftVersion,
-        siteConfig,
+        siteConfig: siteConfig.document,
       },
       command: async (context) => {
-        const saved = await this.repository.saveDraft(context, {
+        await this.projectLock.acquire(context, input.projectId);
+        const referencedAssetIds = managedMediaAssetIds(siteConfig.document);
+        const media = await this.media.validate(context, {
+          workspaceId: input.workspaceId,
+          projectId: input.projectId,
+          referencedAssetIds,
+        });
+        if (media.kind === 'not-ready') {
+          return {
+            httpStatus: 409,
+            responseBody: {
+              code: 'MEDIA_ASSET_NOT_READY',
+              projectId: input.projectId,
+              workspaceId: input.workspaceId,
+            },
+            resourceId: input.projectId,
+            result: { kind: 'media-not-ready' } as const,
+          };
+        }
+        const saved = await this.writeProjectDraft(context, {
           workspaceId: input.workspaceId,
           projectId: input.projectId,
           operationId: `SAVE_DRAFT:${input.operationId}`,
@@ -125,6 +159,9 @@ export class SaveProjectDraft {
         Number(version),
       );
     }
+    if (code === 'MEDIA_ASSET_NOT_READY') {
+      throw new SitesApplicationError('MEDIA_ASSET_NOT_READY');
+    }
     if (code !== undefined) {
       throw new Error('Stored idempotency result is invalid');
     }
@@ -142,9 +179,19 @@ export class SaveProjectDraft {
     if (outcome.kind === 'not-found') {
       throw new SitesApplicationError('NOT_FOUND');
     }
+    if (outcome.kind === 'media-not-ready') {
+      throw new SitesApplicationError('MEDIA_ASSET_NOT_READY');
+    }
     throw new SitesApplicationError(
       'PROJECT_VERSION_CONFLICT',
       outcome.currentDraftVersion,
     );
+  }
+
+  private writeProjectDraft(
+    context: Parameters<SiteRepository['saveDraft']>[0],
+    input: Parameters<SiteRepository['saveDraft']>[1],
+  ): ReturnType<SiteRepository['saveDraft']> {
+    return this.repository.saveDraft(context, input);
   }
 }

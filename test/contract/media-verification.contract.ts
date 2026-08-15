@@ -203,6 +203,8 @@ describe('managed media verification contract', () => {
       attachedProjectId: null,
       expiresAt: new Date('2026-08-12T12:00:00.000Z'),
       attachedAt: null,
+      cleanupStartedAt: null,
+      cleanupLastAttemptAt: null,
       createdAt: now,
     });
     const mutateAsset = (value: MediaAsset): void => {

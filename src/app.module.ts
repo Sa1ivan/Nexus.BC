@@ -11,6 +11,7 @@ import { APP_CONFIG } from './shared/config/app-config.schema';
 import { PrismaModule } from './shared/database/prisma.module';
 import { HealthController } from './shared/health/health.controller';
 import { createApiErrorFilter } from './shared/http/api-error.filter';
+import { CapabilitiesController } from './shared/http/capabilities.controller';
 import { createCredentialedCorsMiddleware } from './shared/http/credentialed-cors.middleware';
 import type { CorsConfiguration } from './shared/http/credentialed-cors.middleware';
 import { createHttpJsonParserMiddleware } from './shared/http/http-json-parser';
@@ -33,7 +34,7 @@ interface MiddlewareRouteConsumer {
     FormsModule,
     NotificationsModule,
   ],
-  controllers: [HealthController],
+  controllers: [CapabilitiesController, HealthController],
   providers: [
     {
       provide: APP_FILTER,

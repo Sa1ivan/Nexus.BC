@@ -119,8 +119,8 @@
           "buttonText": "Начать",
           "buttonHref": "#lead-form",
           "media": {
+            "kind": "managed",
             "assetId": "asset-managed-1",
-            "src": "https://cdn.example.com/managed.webp",
             "alt": "Managed media"
           },
           "styles": {

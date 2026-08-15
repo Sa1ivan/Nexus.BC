@@ -1,4 +1,5 @@
 import type { SiteConfigDocument } from './site-config-v4';
+import type { SiteConfigSchemaVersion } from '../../../shared/config/site-config-rollout';
 
 export interface Release {
   readonly id: string;
@@ -6,6 +7,6 @@ export interface Release {
   readonly operationId: string;
   readonly version: number;
   readonly siteConfig: SiteConfigDocument;
-  readonly schemaVersion: 4;
+  readonly schemaVersion: SiteConfigSchemaVersion;
   readonly publishedAt: Date;
 }

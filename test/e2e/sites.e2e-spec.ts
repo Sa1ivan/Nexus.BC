@@ -424,7 +424,7 @@ describe('authenticated sites drafts HTTP contract', () => {
             operationId: `CREATE_PROJECT:${operationId}`,
             name: 'Rolled back project',
             publicSlug: `site-${projectId}`,
-            siteConfig,
+            siteConfig: { document: siteConfig, schemaVersion: 4 },
           });
           throw new Error('forced failure before idempotency completion');
         },

@@ -12,9 +12,14 @@ import type {
 } from '../application/public';
 import type {
   FindMediaCompletionTargetInput,
+  CreateMediaAssetInput,
+  CreateMediaImportBatchInput,
+  LockProjectMediaAssetInput,
+  LockProjectMediaAssetsInput,
   MarkMediaReadyInput,
   MarkMediaReadyResult,
   MediaCompletionTarget,
+  MediaCatalogRepository,
   MediaRepository,
 } from '../application/ports/media-repository';
 import type { MediaObjectOwner } from '../application/ports/object-storage';
@@ -24,10 +29,12 @@ import type {
   MediaMimeType,
   MediaVerification,
 } from '../domain/media-asset';
+import type { MediaImportBatch } from '../domain/media-import-batch';
 
 interface ImportBatchSummaryRow {
   readonly expiresAt: Date;
   readonly attachedAt: Date | null;
+  readonly cleanupStartedAt: Date | null;
 }
 
 interface VerificationFields {
@@ -57,23 +64,58 @@ interface MediaAssetRow extends VerificationFields {
 }
 
 interface MediaPrismaClient {
+  readonly project: {
+    findFirst(
+      arguments_: Readonly<Record<string, unknown>>,
+    ): Promise<{ readonly id: string } | null>;
+  };
   readonly mediaAsset: {
     findFirst(
       arguments_: Readonly<Record<string, unknown>>,
     ): Promise<MediaAssetRow | null>;
+    findMany(
+      arguments_: Readonly<Record<string, unknown>>,
+    ): Promise<MediaAssetRow[]>;
+    create(
+      arguments_: Readonly<Record<string, unknown>>,
+    ): Promise<MediaAssetRow>;
+    deleteMany(
+      arguments_: Readonly<Record<string, unknown>>,
+    ): Promise<{ readonly count: number }>;
   };
+  readonly mediaImportBatch: {
+    create(
+      arguments_: Readonly<Record<string, unknown>>,
+    ): Promise<MediaImportBatchRow>;
+    findFirst(
+      arguments_: Readonly<Record<string, unknown>>,
+    ): Promise<MediaImportBatchRow | null>;
+  };
+}
+
+interface MediaImportBatchRow {
+  readonly id: string;
+  readonly workspaceId: string;
+  readonly attachedProjectId: string | null;
+  readonly expiresAt: Date;
+  readonly attachedAt: Date | null;
+  readonly cleanupStartedAt: Date | null;
+  readonly cleanupLastAttemptAt: Date | null;
+  readonly createdAt: Date;
 }
 
 interface AttachmentBatchRow {
   readonly attachedProjectId: string | null;
   readonly attachedAt: Date | null;
   readonly expiresAt: Date;
+  readonly cleanupStartedAt: Date | null;
 }
 
 interface AttachmentAssetRow {
   readonly id: string;
   readonly status: string;
   readonly projectId: string | null;
+  readonly cleanupStartedAt: Date | null;
 }
 
 interface MediaTransactionClient {
@@ -85,12 +127,16 @@ interface MediaTransactionClient {
     query: TemplateStringsArray,
     ...values: readonly unknown[]
   ): Promise<T>;
+  $queryRawUnsafe<T>(query: string, ...values: readonly unknown[]): Promise<T>;
   readonly project: {
     findFirst(
       arguments_: Readonly<Record<string, unknown>>,
     ): Promise<{ readonly id: string } | null>;
   };
   readonly mediaAsset: {
+    create(
+      arguments_: Readonly<Record<string, unknown>>,
+    ): Promise<MediaAssetRow>;
     updateMany(
       arguments_: Readonly<Record<string, unknown>>,
     ): Promise<{ readonly count: number }>;
@@ -187,7 +233,7 @@ function ownerWhere(
 ): Readonly<Record<string, unknown>> {
   return owner.kind === 'project'
     ? { projectId: owner.projectId }
-    : { importBatchId: owner.batchId, projectId: null };
+    : { importBatchId: owner.batchId };
 }
 
 function exactAssetSet(
@@ -206,7 +252,7 @@ function exactAssetSet(
 
 @Injectable()
 export class PrismaMediaRepository
-  implements MediaRepository, MediaImportAttachment
+  implements MediaRepository, MediaCatalogRepository, MediaImportAttachment
 {
   constructor(
     @Inject(PrismaClientService)
@@ -221,11 +267,16 @@ export class PrismaMediaRepository
       where: {
         id: input.assetId,
         workspaceId: input.workspaceId,
+        cleanupStartedAt: null,
         ...ownerWhere(input.owner),
       },
       include: {
         importBatch: {
-          select: { expiresAt: true, attachedAt: true },
+          select: {
+            expiresAt: true,
+            attachedAt: true,
+            cleanupStartedAt: true,
+          },
         },
       },
     });
@@ -234,6 +285,134 @@ export class PrismaMediaRepository
       asset: storedAsset(row),
       importBatch: row.importBatch,
     };
+  }
+
+  async projectExists(
+    workspaceId: string,
+    projectId: string,
+  ): Promise<boolean> {
+    return (
+      (await this.prisma.project.findFirst({
+        where: { id: projectId, workspaceId },
+        select: { id: true },
+      })) !== null
+    );
+  }
+
+  async createAsset(input: CreateMediaAssetInput): Promise<MediaAsset | null> {
+    const data = {
+      id: input.id,
+      workspaceId: input.workspaceId,
+      projectId: input.projectId,
+      importBatchId: input.importBatchId,
+      objectKey: input.objectKey,
+      declaredFileName: input.fileName,
+      declaredMimeType: input.mimeType,
+      declaredSizeBytes: input.sizeBytes,
+      declaredChecksumSha256: input.checksumSha256,
+    };
+    if (input.importBatchId === null) {
+      const row = await this.prisma.mediaAsset.create({ data });
+      return storedAsset({ ...row, importBatch: null });
+    }
+    return this.transactions.run(async (context) =>
+      this.transactions[PrismaTransactionClientService](
+        context,
+        async (client) => {
+          const transaction = client as MediaTransactionClient;
+          const batches = await transaction.$queryRaw<
+            readonly AttachmentBatchRow[]
+          >`
+            SELECT "attachedProjectId", "attachedAt", "expiresAt", "cleanupStartedAt"
+            FROM "MediaImportBatch"
+            WHERE "id" = ${input.importBatchId}::uuid
+              AND "workspaceId" = ${input.workspaceId}::uuid
+            FOR UPDATE
+          `;
+          const batch = batches[0];
+          if (
+            batch === undefined ||
+            batch.attachedAt !== null ||
+            batch.attachedProjectId !== null ||
+            batch.cleanupStartedAt !== null ||
+            batch.expiresAt.getTime() <= Date.now()
+          ) {
+            return null;
+          }
+          const row = await transaction.mediaAsset.create({ data });
+          return storedAsset({ ...row, importBatch: null });
+        },
+      ),
+    );
+  }
+
+  async removePendingAsset(
+    workspaceId: string,
+    assetId: string,
+  ): Promise<void> {
+    await this.prisma.mediaAsset.deleteMany({
+      where: { id: assetId, workspaceId, status: 'PENDING' },
+    });
+  }
+
+  async listProjectAssets(
+    workspaceId: string,
+    projectId: string,
+  ): Promise<readonly MediaAsset[]> {
+    const rows = await this.prisma.mediaAsset.findMany({
+      where: {
+        workspaceId,
+        projectId,
+        status: { not: 'DELETING' },
+        cleanupStartedAt: null,
+      },
+      orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+    });
+    return rows.map((row) => storedAsset({ ...row, importBatch: null }));
+  }
+
+  async createImportBatch(
+    input: CreateMediaImportBatchInput,
+  ): Promise<MediaImportBatch> {
+    return this.prisma.mediaImportBatch.create({
+      data: input,
+    });
+  }
+
+  async findOpenImportBatch(
+    workspaceId: string,
+    batchId: string,
+    now: Date,
+  ): Promise<MediaImportBatch | null> {
+    return this.prisma.mediaImportBatch.findFirst({
+      where: {
+        id: batchId,
+        workspaceId,
+        attachedAt: null,
+        attachedProjectId: null,
+        cleanupStartedAt: null,
+        expiresAt: { gt: now },
+      },
+    });
+  }
+
+  async findReadyProjectAssets(
+    workspaceId: string,
+    projectId: string,
+    assetIds: readonly string[],
+  ): Promise<readonly MediaAsset[]> {
+    if (assetIds.length === 0) return [];
+    const rows = await this.prisma.mediaAsset.findMany({
+      where: {
+        id: { in: assetIds },
+        workspaceId,
+        projectId,
+        status: 'READY',
+        deletionMarkedAt: null,
+      },
+      orderBy: { id: 'asc' },
+    });
+    return rows.map((row) => storedAsset({ ...row, importBatch: null }));
   }
 
   async markReady(
@@ -249,14 +428,16 @@ export class PrismaMediaRepository
           input.owner.kind === 'import'
             ? {
                 ...ownerWhere(input.owner),
+                cleanupStartedAt: null,
                 importBatch: {
                   is: {
                     attachedAt: null,
+                    cleanupStartedAt: null,
                     expiresAt: { gt: transitionAt },
                   },
                 },
               }
-            : ownerWhere(input.owner);
+            : { ...ownerWhere(input.owner), cleanupStartedAt: null };
         const updated = await transaction.mediaAsset.updateMany({
           where: {
             id: input.assetId,
@@ -280,6 +461,7 @@ export class PrismaMediaRepository
           where: {
             id: input.assetId,
             workspaceId: input.workspaceId,
+            cleanupStartedAt: null,
             ...ownerWhere(input.owner),
           },
           select: {
@@ -291,7 +473,11 @@ export class PrismaMediaRepository
             verifiedChecksumSha256: true,
             verifiedAt: true,
             importBatch: {
-              select: { expiresAt: true, attachedAt: true },
+              select: {
+                expiresAt: true,
+                attachedAt: true,
+                cleanupStartedAt: true,
+              },
             },
           },
         });
@@ -326,12 +512,72 @@ export class PrismaMediaRepository
     );
   }
 
+  async lockProjectAssets(
+    context: TransactionContext,
+    input: LockProjectMediaAssetsInput,
+  ): Promise<readonly MediaAsset[]> {
+    if (input.referencedAssetIds.length === 0) return [];
+    return this.transactions[PrismaTransactionClientService](
+      context,
+      async (client) => {
+        const transaction = client as MediaTransactionClient;
+        const rows = await transaction.$queryRawUnsafe<MediaAssetRow[]>(
+          `SELECT asset.*, NULL::timestamp AS unused
+             FROM "MediaAsset" asset
+            WHERE asset."id" = ANY($1::uuid[])
+              AND asset."workspaceId" = $2::uuid
+              AND asset."projectId" = $3::uuid
+            ORDER BY asset."id" FOR UPDATE`,
+          [...input.referencedAssetIds],
+          input.workspaceId,
+          input.projectId,
+        );
+        return rows.map((row) => storedAsset({ ...row, importBatch: null }));
+      },
+    );
+  }
+
+  async lockProjectAsset(
+    context: TransactionContext,
+    input: LockProjectMediaAssetInput,
+  ): Promise<MediaAsset | null> {
+    const assets = await this.lockProjectAssets(context, {
+      workspaceId: input.workspaceId,
+      projectId: input.projectId,
+      referencedAssetIds: [input.assetId],
+    });
+    return assets[0] ?? null;
+  }
+
+  async markDeleting(
+    context: TransactionContext,
+    input: LockProjectMediaAssetInput,
+  ): Promise<boolean> {
+    return this.transactions[PrismaTransactionClientService](
+      context,
+      async (client) => {
+        const transaction = client as MediaTransactionClient;
+        const updated = await transaction.mediaAsset.updateMany({
+          where: {
+            id: input.assetId,
+            workspaceId: input.workspaceId,
+            projectId: input.projectId,
+            status: 'READY',
+            deletionMarkedAt: null,
+          },
+          data: { status: 'DELETING', deletionMarkedAt: new Date() },
+        });
+        return updated.count === 1;
+      },
+    );
+  }
+
   private async attachInTransaction(
     transaction: MediaTransactionClient,
     input: AttachMediaImportBatchInput,
   ): Promise<AttachMediaImportBatchResult> {
     const batches = await transaction.$queryRaw<AttachmentBatchRow[]>`
-      SELECT "attachedProjectId", "attachedAt", "expiresAt"
+      SELECT "attachedProjectId", "attachedAt", "expiresAt", "cleanupStartedAt"
       FROM "MediaImportBatch"
       WHERE "workspaceId" = ${input.workspaceId}::uuid
         AND "id" = ${input.batchId}::uuid
@@ -342,6 +588,7 @@ export class PrismaMediaRepository
     if (batch.attachedAt !== null || batch.attachedProjectId !== null) {
       return { kind: 'already-attached' };
     }
+    if (batch.cleanupStartedAt !== null) return { kind: 'expired' };
     if (batch.expiresAt.getTime() <= Date.now()) {
       return { kind: 'expired' };
     }
@@ -353,7 +600,7 @@ export class PrismaMediaRepository
     if (project === null) return { kind: 'not-found' };
 
     const assets = await transaction.$queryRaw<AttachmentAssetRow[]>`
-      SELECT "id", "status", "projectId"
+      SELECT "id", "status", "projectId", "cleanupStartedAt"
       FROM "MediaAsset"
       WHERE "workspaceId" = ${input.workspaceId}::uuid
         AND "importBatchId" = ${input.batchId}::uuid
@@ -365,7 +612,8 @@ export class PrismaMediaRepository
     }
     if (
       assets.some(
-        ({ status, projectId }) => status !== 'READY' || projectId !== null,
+        ({ status, projectId, cleanupStartedAt }) =>
+          status !== 'READY' || projectId !== null || cleanupStartedAt !== null,
       )
     ) {
       return { kind: 'asset-not-ready' };
@@ -379,6 +627,7 @@ export class PrismaMediaRepository
         AND "workspaceId" = ${input.workspaceId}::uuid
         AND "attachedProjectId" IS NULL
         AND "attachedAt" IS NULL
+        AND "cleanupStartedAt" IS NULL
         AND "expiresAt" > clock_timestamp()
     `;
     if (batchUpdateCount !== 1) return { kind: 'expired' };
@@ -390,6 +639,7 @@ export class PrismaMediaRepository
         id: { in: input.referencedAssetIds },
         status: 'READY',
         projectId: null,
+        cleanupStartedAt: null,
       },
       data: { projectId: input.projectId },
     });

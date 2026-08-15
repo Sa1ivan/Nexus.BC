@@ -5,6 +5,11 @@ import {
   type AppConfig,
 } from '../../../shared/config/app-config.schema';
 import { IdempotencyCoordinator } from '../../../shared/idempotency/idempotency-coordinator';
+import {
+  MEDIA_IMPORT_ATTACHMENT,
+  type MediaImportAttachment,
+} from '../../media/application/public';
+import { managedMediaAssetIds } from './managed-media-references';
 import type { EditorProjectDto } from './public';
 import { SiteAccessPolicy } from './site-access-policy';
 import { editorProjectDto, replayEditorProject } from './site-project-view';
@@ -19,6 +24,8 @@ export class CreateProject {
     private readonly access: SiteAccessPolicy,
     private readonly idempotency: IdempotencyCoordinator,
     @Inject(APP_CONFIG) private readonly configuration: AppConfig,
+    @Inject(MEDIA_IMPORT_ATTACHMENT)
+    private readonly mediaImports: MediaImportAttachment,
   ) {}
 
   async execute(input: {
@@ -27,8 +34,12 @@ export class CreateProject {
     readonly operationId: string;
     readonly name: string;
     readonly siteConfig: unknown;
+    readonly mediaImportBatchId?: string;
   }): Promise<EditorProjectDto> {
-    const siteConfig = requireCanonicalSiteConfig(input.siteConfig);
+    const siteConfig = requireCanonicalSiteConfig(
+      input.siteConfig,
+      this.configuration.siteConfigRolloutMode,
+    );
     await this.access.requireMember(input.workspaceId, input.userId);
     const projectId = randomUUID();
     const publicSlug = `site-${randomUUID()}`;
@@ -36,7 +47,8 @@ export class CreateProject {
       operation: 'CREATE_PROJECT',
       workspaceId: input.workspaceId,
       name: input.name,
-      siteConfig,
+      siteConfig: siteConfig.document,
+      mediaImportBatchId: input.mediaImportBatchId ?? null,
     };
     const execution = await this.idempotency.execute({
       key: {
@@ -54,6 +66,20 @@ export class CreateProject {
           publicSlug,
           siteConfig,
         });
+        const referencedAssetIds = managedMediaAssetIds(siteConfig.document);
+        if (input.mediaImportBatchId !== undefined) {
+          const attachment = await this.mediaImports.attach(context, {
+            workspaceId: input.workspaceId,
+            projectId,
+            batchId: input.mediaImportBatchId,
+            referencedAssetIds,
+          });
+          if (attachment.kind !== 'attached') {
+            throw new SitesApplicationError('MEDIA_IMPORT_INVALID');
+          }
+        } else if (referencedAssetIds.length > 0) {
+          throw new SitesApplicationError('MEDIA_ASSET_NOT_READY');
+        }
         const result = editorProjectDto(project, this.configuration);
         return {
           httpStatus: 201,

@@ -41,6 +41,10 @@ class MemoryObjectStorage implements ObjectStorage {
     return Promise.reject(new Error('not used'));
   }
 
+  createPresignedGet(): Promise<never> {
+    return Promise.reject(new Error('not used'));
+  }
+
   head(key: ObjectStorageKey) {
     const bytes = this.objects.get(key);
     return Promise.resolve(

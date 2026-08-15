@@ -4,11 +4,21 @@ import {
   AUDIT_WRITER,
   type AuditWriter,
 } from '../../../shared/audit/audit-writer';
+import {
+  APP_CONFIG,
+  type AppConfig,
+} from '../../../shared/config/app-config.schema';
 import { IdempotencyCoordinator } from '../../../shared/idempotency/idempotency-coordinator';
 import type { StoredIdempotencyRecord } from '../../../shared/idempotency/idempotency-store';
+import {
+  MEDIA_MANAGED_REFERENCE_VALIDATION,
+  type MediaManagedReferenceValidation,
+} from '../../media/application/public';
+import { managedMediaAssetIds } from './managed-media-references';
 import type { ReleaseResultDto } from './public';
 import { releaseResultDto, replayReleaseResult } from './release-result';
 import { SiteAccessPolicy } from './site-access-policy';
+import { SitesProjectTransactionLock } from './sites-project-transaction-lock';
 import { SitesApplicationError } from './sites-errors';
 import { SITE_REPOSITORY, type SiteRepository } from './sites.ports';
 import { requireCanonicalSiteConfig } from './validate-site-config';
@@ -16,10 +26,13 @@ import { requireCanonicalSiteConfig } from './validate-site-config';
 type PublishProjectOutcome =
   | { readonly kind: 'published'; readonly release: ReleaseResultDto }
   | { readonly kind: 'not-found' }
+  | { readonly kind: 'media-not-ready' }
   | {
       readonly kind: 'version-conflict';
       readonly currentDraftVersion: number;
     };
+
+export const PUBLISH_PROJECT = Symbol('PublishProject');
 
 function hasExactFields(value: object, fields: readonly string[]): boolean {
   return Object.keys(value).sort().join(',') === [...fields].sort().join(',');
@@ -76,6 +89,10 @@ export class PublishProject {
     private readonly access: SiteAccessPolicy,
     private readonly idempotency: IdempotencyCoordinator,
     @Inject(AUDIT_WRITER) private readonly audit: AuditWriter,
+    @Inject(APP_CONFIG) private readonly configuration: AppConfig,
+    private readonly projectLock: SitesProjectTransactionLock,
+    @Inject(MEDIA_MANAGED_REFERENCE_VALIDATION)
+    private readonly media: MediaManagedReferenceValidation,
   ) {}
 
   async execute(input: {
@@ -87,7 +104,10 @@ export class PublishProject {
     readonly expectedDraftVersion: number;
     readonly siteConfig: unknown;
   }): Promise<ReleaseResultDto> {
-    const siteConfig = requireCanonicalSiteConfig(input.siteConfig);
+    const siteConfig = requireCanonicalSiteConfig(
+      input.siteConfig,
+      this.configuration.siteConfigRolloutMode,
+    );
     await this.access.requireMember(input.workspaceId, input.userId);
     const execution = await this.idempotency.execute<PublishProjectOutcome>({
       key: {
@@ -100,10 +120,29 @@ export class PublishProject {
         workspaceId: input.workspaceId,
         projectId: input.projectId,
         expectedDraftVersion: input.expectedDraftVersion,
-        siteConfig,
+        siteConfig: siteConfig.document,
       },
       command: async (context) => {
-        const published = await this.repository.publishProject(context, {
+        await this.projectLock.acquire(context, input.projectId);
+        const referencedAssetIds = managedMediaAssetIds(siteConfig.document);
+        const media = await this.media.validate(context, {
+          workspaceId: input.workspaceId,
+          projectId: input.projectId,
+          referencedAssetIds,
+        });
+        if (media.kind === 'not-ready') {
+          return {
+            httpStatus: 409,
+            responseBody: {
+              code: 'MEDIA_ASSET_NOT_READY',
+              projectId: input.projectId,
+              workspaceId: input.workspaceId,
+            },
+            resourceId: input.projectId,
+            result: { kind: 'media-not-ready' } as const,
+          };
+        }
+        const published = await this.writeProjectRelease(context, {
           workspaceId: input.workspaceId,
           projectId: input.projectId,
           operationId: `PUBLISH_PROJECT:${input.operationId}`,
@@ -185,6 +224,9 @@ export class PublishProject {
       );
       throw new SitesApplicationError('PROJECT_VERSION_CONFLICT', version);
     }
+    if (code === 'MEDIA_ASSET_NOT_READY') {
+      throw new SitesApplicationError('MEDIA_ASSET_NOT_READY');
+    }
     if (code !== undefined) {
       throw new Error('Stored idempotency result is invalid');
     }
@@ -202,9 +244,19 @@ export class PublishProject {
     if (outcome.kind === 'not-found') {
       throw new SitesApplicationError('NOT_FOUND');
     }
+    if (outcome.kind === 'media-not-ready') {
+      throw new SitesApplicationError('MEDIA_ASSET_NOT_READY');
+    }
     throw new SitesApplicationError(
       'PROJECT_VERSION_CONFLICT',
       outcome.currentDraftVersion,
     );
+  }
+
+  private writeProjectRelease(
+    context: Parameters<SiteRepository['publishProject']>[0],
+    input: Parameters<SiteRepository['publishProject']>[1],
+  ): ReturnType<SiteRepository['publishProject']> {
+    return this.repository.publishProject(context, input);
   }
 }

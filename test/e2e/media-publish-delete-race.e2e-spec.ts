@@ -9,6 +9,7 @@ import { Pool } from 'pg';
 import request from 'supertest';
 import type { App } from 'supertest/types';
 import { AppModule } from '../../src/app.module';
+import { APP_CONFIG } from '../../src/shared/config/app-config.schema';
 import type { PrismaClient } from '../../src/generated/prisma/client';
 import {
   buildProjectMediaObjectKey,
@@ -18,6 +19,10 @@ import {
   type ObjectStorageKey,
 } from '../../src/modules/media/application/ports/object-storage';
 import { PrismaClientService } from '../../src/shared/database/prisma.service';
+import {
+  createV5TestDatabase,
+  type V5TestDatabase,
+} from './support/v5-test-database';
 
 const allowedOrigin = 'http://localhost:4200';
 const accessTokenSecret = 'test-access-token-secret-32-bytes';
@@ -53,8 +58,13 @@ type ReferenceKind =
 class MemoryObjectStorage implements ObjectStorage {
   readonly objects = new Map<ObjectStorageKey, Uint8Array>();
   readonly deleted: ObjectStorageKey[] = [];
+  readonly failNextDelete = new Set<ObjectStorageKey>();
 
   createPresignedPut(): Promise<never> {
+    return Promise.reject(new Error('not used'));
+  }
+
+  createPresignedGet(): Promise<never> {
     return Promise.reject(new Error('not used'));
   }
 
@@ -93,6 +103,9 @@ class MemoryObjectStorage implements ObjectStorage {
   }
 
   delete(key: ObjectStorageKey): Promise<void> {
+    if (this.failNextDelete.delete(key)) {
+      return Promise.reject(new Error('simulated storage deletion failure'));
+    }
     this.deleted.push(key);
     this.objects.delete(key);
     return Promise.resolve();
@@ -366,13 +379,16 @@ describe('managed media save/publish versus deletion serialization', () => {
   let pool: Pool;
   let prisma: PrismaClient;
   let storage: MemoryObjectStorage;
+  let testDatabase: V5TestDatabase;
   const userIds: string[] = [];
   const workspaceIds: string[] = [];
 
   beforeAll(async () => {
-    pool = new Pool({ connectionString: process.env['DATABASE_URL'] });
+    testDatabase = await createV5TestDatabase('nexus_media_race');
+    pool = testDatabase.pool;
     storage = new MemoryObjectStorage();
     const builder = Test.createTestingModule({ imports: [AppModule] });
+    builder.overrideProvider(APP_CONFIG).useValue(testDatabase.configuration);
     builder.overrideProvider(OBJECT_STORAGE).useValue(storage);
     const moduleFixture = await builder.compile();
     app = moduleFixture.createNestApplication<NestExpressApplication>({
@@ -437,7 +453,7 @@ describe('managed media save/publish versus deletion serialization', () => {
       expect(residue.rows).toEqual([]);
     } finally {
       await app.close();
-      await pool.end();
+      await testDatabase.dispose();
     }
   });
 
@@ -717,6 +733,42 @@ describe('managed media save/publish versus deletion serialization', () => {
       expect(storage.deleted).not.toContain(asset.key);
     },
   );
+
+  it('returns repeat-safe 202 until storage deletion succeeds, then stable 204', async () => {
+    const identity = await seedIdentity('delete-retry');
+    const asset = await seedReadyAsset(identity);
+    storage.failNextDelete.add(asset.key);
+
+    const pending = await deleteRequest(identity, asset.assetId);
+
+    expect(pending.status).toBe(202);
+    expect(storage.objects.get(asset.key)).toEqual(png);
+    const marked = await prisma.mediaAsset.findUniqueOrThrow({
+      where: { id: asset.assetId },
+    });
+    expect(marked.status).toBe('DELETING');
+    expect(marked.deletionMarkedAt).toBeInstanceOf(Date);
+    await expect(
+      prisma.auditEvent.count({
+        where: {
+          resourceId: asset.assetId,
+          action: 'MEDIA_DELETION_MARKED',
+        },
+      }),
+    ).resolves.toBe(1);
+
+    expect((await deleteRequest(identity, asset.assetId)).status).toBe(204);
+    expect((await deleteRequest(identity, asset.assetId)).status).toBe(204);
+    expect(storage.objects.has(asset.key)).toBe(false);
+    await expect(
+      prisma.auditEvent.count({
+        where: {
+          resourceId: asset.assetId,
+          action: 'MEDIA_DELETION_MARKED',
+        },
+      }),
+    ).resolves.toBe(1);
+  });
 
   it.each(['site-first', 'delete-first'] as const)(
     'deterministically serializes publish versus delete with %s',
